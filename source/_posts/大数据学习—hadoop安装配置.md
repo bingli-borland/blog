@@ -23,7 +23,7 @@ chmod 700 ~/.ssh                  #文件权限很重要
 
 #### java环境安装
 要求jdk7及以上，可google，此处不详细讲解
-
+<!--more-->
 ### 安装hadoop2.7.1
 解压缩安装包：
 ```
@@ -213,3 +213,6 @@ jps                        # 判断是否启动成功
 ```
 若成功启动，则k8s-master节点启动了NameNode、SecondrryNameNode、ResourceManager进程，k8s-node节点启动了DataNode和NodeManager进程。
 可参照上面伪分布式配置执行WordCount实例。
+
+### 参考文献
+[http://dblab.xmu.edu.cn/blog/install-hadoop/](http://dblab.xmu.edu.cn/blog/install-hadoop/)
