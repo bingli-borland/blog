@@ -121,3 +121,6 @@ F:\project\TOMCAT_8_5_23\output\build\bin> catalina.bat jpda start
 ![](Tomcat源码分析—eclipse环境搭建/debug3.jpg)
 ![](Tomcat源码分析—eclipse环境搭建/debug4.jpg)
 
+### 补充
+由于目前使用的8.5.23版本的tomcat去掉了BIO，而7.0.83版是带有BIO的连接器的，因此以后分析采用7.0.83版本，环境搭建过程和上面的类似。
+
