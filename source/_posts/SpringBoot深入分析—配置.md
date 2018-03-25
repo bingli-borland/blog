@@ -164,7 +164,7 @@ public class EmbeddedServletContainerCustomizerBeanPostProcessor
 ### 接入另一种web容器
 我们来思考下给springboot接入另一种web容器需要做那些事？例如weblogic
 创建独立的工程spring-boot-starter-weblogic
-1.创建web容器的工厂以及factory初始化器
+1、创建web容器的工厂以及factory初始化器
 WeblogicEmbeddedServletContainerFactory
 EmbeddedWeblogicServletContainerAutoConfiguration
 2、配置
