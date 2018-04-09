@@ -29,11 +29,51 @@ F:\project\TOMCAT_8_5_23>ant
 编译好之后再查看源码目录下output/build，即为编译好的tomcat
 ![](Tomcat源码分析—eclipse环境搭建/tomcat.jpg)
 
+各个目录作用如下：
+
+```
+bin——存放各种不同平台开启与关闭Tomcat的脚本文件
+
+lib——存tomcat与web应用的Jar包
+
+conf——存放tomcat的配置文件：
+server.xml-tomcat主要配置文件，即存放server、service、connector、engine、host等结构以及属性的文件
+web.xml-默认的web应用配置文件，部署应用时将会和应用自身的web.xml合并
+context.xml-默认给应用配置一些非标准信息的配置文件，起到私有描述符的作用，类似于glassfish的glass fish-web.xml
+tomcat-users.xml-文件安全域（UserDatabaseRealm）配置用户和密码的文件
+logging.properties-tomcat日志配置文件，日志级别和handler
+catalina.properties-tomcat默认的一些系统属性配置，common.loader、shared.loader、server.loader
+catalina.policy-Java Security Manager 实现的安全策略声明，只有当Tomcat用-security命令行参数启动时这个文件才会被使用
+
+webapps——web应用的发布目录，tomcat启动时，加载webapps文件夹下的项目
+
+work——tomcat把由各种jsp生成的servlet文件存放的地方
+
+logs——tomcat存放日志文件的地方
+
+temp——tomcat存放临时文件的地方
+```
+
+
+
 ### 导入eclipse
 现在将tomcat源码导入eclipse，有种方案：
-1、新建一个java工程，将源码中的所有那文件拷贝过去，同时将下载的依赖添加到buildpath中，此方案具体步骤可百度解决，此处不再详细描述。
-2、新添加一个pom文件改为maven工程，即可导入eclipse。
+1、在源码目录上执行转换工程的命令
+
+```
+# 转为eclipse工程
+ant ide-eclipse
+
+# 转为netbeans工程
+ant ide-netbeans
+```
+
+
+
+2、新建一个java工程，将源码中的所有那文件拷贝过去，同时将下载的依赖添加到buildpath中，此方案具体步骤可百度解决，此处不再详细描述。
+3、新添加一个pom文件改为maven工程，即可导入eclipse。
 pom.xml文件内容
+
 ```
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -86,7 +126,7 @@ pom.xml文件内容
 </project>
 
 ```
-用第二种方式导入eclipse成功后如下：
+用第3种方式导入eclipse成功后如下：
 ![](Tomcat源码分析—eclipse环境搭建/eclipse-tomcat-project.jpg)
 
 ### debug模式启动tomcat
@@ -110,7 +150,7 @@ F:\project\TOMCAT_8_5_23\output\build\bin> catalina.bat jpda start
     JPDA_TRANSPORT=dt_socket  
     JPDA_ADDRESS=5005  
     JPAD_SUSPEND=n  
-``` 
+```
 增加远程调试参数的方式有很多，这里就不一一描述了。
 ### 使用eclipse远程调试tomcat
 以debug模式启动tomcat后，在eclipse中Debug Configuration->新建Remote Java Application，注意调试Host和Port分别为localhost和8000：

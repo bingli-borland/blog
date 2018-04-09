@@ -288,7 +288,7 @@ root       1357      1  0 19:41 ?        00:00:11 /usr/bin/dockerd --bip=182.48.
 1. 容器直接使用目标容器的 ip 访问，默认通过容器内部的 eth0 发送出去
 2. 报文通过 veth pair 被发送到 vethXXX
 3. vethXXX 是直接连接到虚拟交换机 docker0 的，报文通过虚拟 bridge docker0 发送出去
-4. 查找路由表，外部容器 ip 的报文都会转发到 flannel0 虚拟网卡，这是一个 P2P 的虚拟网卡，然后报文就被转发到监听在另一端的 flanneld
+4. 查找路由表，外部容器 ip 的报文都会转发到 flannel0 虚拟网卡，这是一个 P2P 的虚拟网卡（参考有关linux 有关tun/tap设备的知识），然后报文就被转发到监听在另一端的 flanneld
 5. flanneld 通过 etcd 维护了各个节点之间的路由表，把原来的报文 UDP 封装一层，通过配置的 `iface` 发送出去
 6. 报文通过主机之间的网络找到目标主机
 7. 报文继续往上，到传输层，交给监听在 8285 端口的 flanneld 程序处理
