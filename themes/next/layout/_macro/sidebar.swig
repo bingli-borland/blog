@@ -108,6 +108,24 @@
               {% endfor %}
             {% endif %}
           </div>
+    
+    <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-globe"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                  <li class="links-of-blogroll-item">
+                    <a href="http://jm.taobao.org/" title="{{ __('alibaba') }}" target="_blank">{{ __('alibaba') }}</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="http://blog.51cto.com/guojuanjun" title="{{ __('guojianjun') }}" target="_blank">{{ __('guojianjun') }}</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="https://segmentfault.com/u/wuyangchun" title="Linux¼¼Êõ" target="_blank">wuyangchun(Linux)</a>
+                  </li>
+              </ul>
+            </div>
 
           {% set cc = {'by': 1, 'by-nc': 1, 'by-nc-nd': 1, 'by-nc-sa': 1, 'by-nd': 1, 'by-sa': 1, 'zero': 1} %}
           {% if theme.creative_commons in cc %}

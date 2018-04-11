@@ -36,6 +36,8 @@ post:
   totalcount: Site words total count
   copyright:
     author: 本文作者
+    created: 发表时间
+    modified: 最后更新
     link: 本文链接
     license_title: 版权声明
     license_content: '本博客所有文章除特别声明外，均采用
@@ -48,6 +50,10 @@ page:
 footer:
   powered: "由 %s 强力驱动"
   theme: 主题
+  site_total: 您是本站第
+  page_total: 本文共被围观
+  site_unit: 位访问者
+  page_unit: 次
 
 counter:
   tag_cloud:
@@ -96,3 +102,6 @@ reward:
   bitcoin: 比特币
 
 gitmentbutton: 显示 Gitment 评论
+bloglinks: 链接
+alibaba: 阿里中间件博客
+guojianjun: 天下无贼

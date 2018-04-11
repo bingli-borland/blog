@@ -1,6 +1,7 @@
 ---
 title: 大数据学习—hadoop安装配置
 date: 2017-11-25 20:58:08
+updated: 2017-11-25 20:58:08
 tags: [hadoop, 大数据]
 categories: [hadoop]
 ---

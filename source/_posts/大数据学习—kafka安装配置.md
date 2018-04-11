@@ -1,6 +1,7 @@
 ---
 title: 大数据学习—kafka安装配置
 date: 2017-11-26 15:02:04
+updated: 2017-11-26 15:02:04
 tags: [kafka, 大数据]
 categories: [kafka]
 ---
