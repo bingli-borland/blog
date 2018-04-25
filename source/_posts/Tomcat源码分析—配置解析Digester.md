@@ -1,5 +1,5 @@
 ---
-title: Tomcat源码分析—Bootstrap启动和停止
+title: Tomcat源码分析—配置解析Digester
 date: 2018-04-24 14:31:56
 updated: 2018-04-24 14:31:56
 tags: [tomcat, digester, java, server.xml]
