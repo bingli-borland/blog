@@ -327,6 +327,102 @@ tcpdump: listening on ens33, link-type EN10MB (Ethernet), capture size 262144 by
 
 ![](Docker—跨主机容器通信/rq3.jpg)
 
+### 路由机制实现容器跨主机通信
+
+环境：
+
+- CentOS Linux release 7.1.1503 (Core)    docker-17.05.0-ce
+
+| card              | ip           | mac               |
+| :---------------- | :----------- | :---------------- |
+| docker0           | 172.18.0.1   | 02:42:3d:b9:63:0a |
+| ens33             | 192.168.1.50 | 00:50:56:3a:64:16 |
+| root@600c3ecac1c5 | 172.18.0.2   | 02:42:ac:12:00:02 |
+
+- Ubuntu 14.04.5 LTS  docker-18.03.0-ce
+
+| card              | ip           | mac               |
+| ----------------- | ------------ | ----------------- |
+| docker0           | 172.17.42.1  | 02:42:63:9a:68:5c |
+| eth0              | 192.168.1.48 | 00:0c:29:3d:8f:81 |
+| root@9e3037bff56f | 172.17.0.1   | 02:42:ac:11:00:01 |
+
+当前这个环境在600c3ecac1c5容器中ping 9e3037bff56f容器肯定无法ping通，因为数据到了docker0之后，查询路由表，并不知道172.17.0.1在哪儿？这时可以增加路由信息
+
+```shell
+# cenos 所有数据包目的地址为172.17.0.0/16都找网关192.168.1.48去
+route add -net 172.17.0.0/16 gw 192.168.1.48
+# ubuntu 所有数据包目的地址为172.18.0.0/16都找网关192.168.1.50去
+route add -net 172.18.0.0/16 gw 192.168.1.50
+```
+
+再次ping 172.17.0.1，结果是ok的：
+
+```shell
+[root@600c3ecac1c5 /]# ping 172.17.0.1
+PING 172.17.0.1 (172.17.0.1) 56(84) bytes of data.
+64 bytes from 172.17.0.1: icmp_seq=1 ttl=62 time=0.396 ms
+64 bytes from 172.17.0.1: icmp_seq=2 ttl=62 time=0.815 ms
+```
+
+centos机器抓包-docker0网卡数据：
+
+第一条报文里源ip和mac地址是对应的，172.18.0.2和02:42:ac:12:00:02，但是查看上述环境，目的ip和mac地址就不对应了，172.17.0.1和02:42:3d:b9:63:0a，原因是容器里是一个二层网络，172.17.0.1和自己不在一个网络内，所以将数据发给Docker0网关，因此mac地址是docker0的地址。
+
+```shell
+[root@etcd bes]# tshark -i docker0  -e ip.src -e eth.src -e ip.dst -e eth.dst -T fields -E separator=, -f icmp
+Running as user "root" and group "root". This could be dangerous.
+Capturing on 'docker0'
+172.18.0.2,02:42:ac:12:00:02,172.17.0.1,02:42:3d:b9:63:0a
+172.17.0.1,02:42:3d:b9:63:0a,172.18.0.2,02:42:ac:12:00:02
+172.18.0.2,02:42:ac:12:00:02,172.17.0.1,02:42:3d:b9:63:0a
+172.17.0.1,02:42:3d:b9:63:0a,172.18.0.2,02:42:ac:12:00:02
+```
+
+centos机器抓包-ens33网卡数据：
+
+docker0接收到数据包之后，经过路由计算，这个报文被发往下一跳的路由接口是ens33，因此看第一条报文，源ip地址172.18.0.2对应的mac地址改成了ens33网卡的mac地址，而目的ip地址172.17.0.1的mac地址是另一台主机物理网卡eth0的mac地址。这就是我们增加的那条路由信息的作用。
+
+```shell
+[root@etcd bes]# tshark -i ens33  -e ip.src -e eth.src -e ip.dst -e eth.dst -T fields -E separator=, -f icmp
+Running as user "root" and group "root". This could be dangerous.
+Capturing on 'ens33'
+172.18.0.2,00:50:56:3a:64:16,172.17.0.1,00:0c:29:3d:8f:81
+172.17.0.1,00:0c:29:3d:8f:81,172.18.0.2,00:50:56:3a:64:16
+172.18.0.2,00:50:56:3a:64:16,172.17.0.1,00:0c:29:3d:8f:81
+172.17.0.1,00:0c:29:3d:8f:81,172.18.0.2,00:50:56:3a:64:16
+```
+
+ubuntu机器抓包-eth0网卡数据：
+
+eth0网卡接收到报文后，经过路由计算，发给下一跳路由接口docker0
+
+```shell
+root@ubuntu:/home/bes# tshark -i eth0  -e ip.src -e eth.src -e ip.dst -e eth.dst -T fields -E separator=, -f icmp
+Running as user "root" and group "root". This could be dangerous.
+Capturing on 'eth0'
+172.18.0.2,00:50:56:3a:64:16,172.17.0.1,00:0c:29:3d:8f:81
+172.17.0.1,00:0c:29:3d:8f:81,172.18.0.2,00:50:56:3a:64:16
+172.18.0.2,00:50:56:3a:64:16,172.17.0.1,00:0c:29:3d:8f:81
+172.17.0.1,00:0c:29:3d:8f:81,172.18.0.2,00:50:56:3a:64:16
+```
+
+ubuntu机器抓包-docker0网卡数据：
+
+从第一条报文看出，源ip 172.18.0.2对应的mac地址变成了docker0的mac地址，目的ip 172.17.0.1的mac变成了容器内网卡eth0的mac地址，这样ping的请求到达容器内，然后ping返回信息，分析过程和上面的类似。
+
+```shell
+root@ubuntu:/home/bes# tshark -i docker0  -e ip.src -e eth.src -e ip.dst -e eth.dst -T fields -E separator=, -f icmp
+Running as user "root" and group "root". This could be dangerous.
+Capturing on 'docker0'
+172.18.0.2,02:42:63:9a:68:5c,172.17.0.1,02:42:ac:11:00:01
+172.17.0.1,02:42:ac:11:00:01,172.18.0.2,02:42:63:9a:68:5c
+172.18.0.2,02:42:63:9a:68:5c,172.17.0.1,02:42:ac:11:00:01
+172.17.0.1,02:42:ac:11:00:01,172.18.0.2,02:42:63:9a:68:5c
+```
+
+实际上Calico实现跨主机容器间的通信就是通过这种路由机制，相比Flannel，优点就是不用封包拆包，效率比较高。
+
 ### 参考
 
 1.[Docker 配置Flannel网络过程及原理](https://blog.csdn.net/liukuan73/article/details/54897594)
