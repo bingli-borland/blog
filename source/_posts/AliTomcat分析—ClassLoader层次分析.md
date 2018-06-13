@@ -374,3 +374,8 @@ Class<?> resolveSystemClassLoader(String name) throws PandoraLoaderException {
 }
 ```
 
+### 总结
+
+整个层次结构图如下：
+
+![](AliTomcat分析—ClassLoader层次分析/alitomcat.jpg)
