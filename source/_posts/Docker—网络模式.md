@@ -7,7 +7,7 @@ categories:
   - docker
 toc: true
 date: 2018-03-28 17:14:17
-updated: 2018-03-28 17:14:17
+updated: 2018-06-25 11:14:17
 ---
 
 ### 前言
@@ -76,9 +76,24 @@ host模式结构：
 
 ![](Docker—网络模式\host.png)
 
+#### 案例
+
+在k8s中，每个Pod都会默认启动一个pod-infrastructure（或pause）的容器，作为共享网络的基准容器。其他业务容器在启动之后，会将自己的网络模式指定为“"NetworkMode":   "container:pause_containerID”。这样就能做到Pod中的所有容器网络都是共享的，一个Pod中的所有容器中的网络是一致的，它们能够通过本地地址（localhost）访问其他用户容器的端口。在Kubernetes的网络模型中，每一个Pod都拥有一个扁平化共享网络命名空间的IP，称为PodIP。通过PodIP，Pod就能够跨网络与其他物理机和容器进行通信。
+
+但是有些容器内应用需要用到物理层面的网络资源（比如flannel），这就要求Kubernetes中的该Pod以HOST模式来启动，即直接使用宿主机的网络，不进行网络虚拟化隔离。这样，Pod中的所有容器就直接暴露在宿主机的网络环境中，这时候，Pod的PodIP就是其所在Node的IP。从原理上来说，当设定Pod的网络为Host时，是设定了Pod中pod-infrastructure（或pause）容器的网络为Host，Pod内部其他业务容器的网络指向该容器，即pause使用host模式，而flannel容器使用的container模式共享pause的网络资源，这样flannel容器就相当于也是使用的物理网路资源了。如下所示（65070affecfc61为业务容器，f60a2ee415e3为pod-infrastructure容器）：
+
+```shell
+[root@k8s-master ~]# docker inspect 65070affecfc6131b2385e5c40d4f21f73c343cc15e7983cdce8594e38ed020f | grep NetworkMode
+            "NetworkMode": "container:f60a2ee415e301491f30ffc12855880273da6eded2526a5319eed72a92caef7f",
+[root@k8s-master ~]# docker inspect f60a2ee415e301491f30ffc12855880273da6eded2526a5319eed72a92caef7f  | grep NetworkMode
+            "NetworkMode": "host",
+```
+
+ 
+
 ### Container模式
 
-这个模式指定新创建的容器和已经存在的一个容器共享一个 Network Namespace，而不是和宿主机共享。新创建的容器不会创建自己的网卡，配置自己的 IP，而是和一个指定的容器共享 IP、端口范围等。同样，两个容器除了网络方面，其他的如文件系统、进程列表等还是隔离的。两个容器的进程可以通过 lo 网卡设备通信。
+这个模式指定新创建的容器和已经存在的一个容器共享一个 Network Namespace，而不是和宿主机共享。新创建的容器不会创建自己的网卡，配置自己的 IP，而是和一个指定的容器共享 IP、端口范围等。同样，两个容器除了网络方面，其他的如文件系统、进程列表等还是隔离的。两个容器的进程可以通过 lo 网卡设备通信。上面的案例中，k8s的pod中业务容器就是通过这种模式共享pause容器的网络资源的。
 
 创建container模式容器命令如下：
 
