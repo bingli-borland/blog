@@ -120,7 +120,7 @@ docker run -it --net=container:1e5c62d8e949 centos /bin/bash
 
 ### None模式
 
-使用none模式，Docker容器拥有自己的Network Namespace，但是，并不为Docker容器进行任何网络配置。也就是说，这个Docker容器没有网卡、IP、路由等信息。需要我们自己为Docker容器添加网卡、配置IP等。
+使用none模式，Docker容器拥有自己的Network Namespace，但是，并不为Docker容器进行任何网络配置。也就是说，这个Docker容器没有网卡、IP、路由等信息。需要我们自己为Docker容器添加网卡、配置IP等。k8s的大部分pause容器都是设置为此模式，然后手动设置网卡、ip、路由信息给pause容器，而不是用docker自动分配ip给容器。
 
 创建container模式容器命令如下：
 

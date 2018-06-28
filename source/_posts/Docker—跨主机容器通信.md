@@ -327,6 +327,29 @@ tcpdump: listening on ens33, link-type EN10MB (Ethernet), capture size 262144 by
 
 ![](Docker—跨主机容器通信/rq3.jpg)
 
+#### 其他
+
+通过查看flannel的文档，上面我们设置给etcd的信息：
+
+```json
+{
+      "Network": "182.48.0.0/16",
+}
+```
+
+这个只是规定了容器的网段，其实还有个Backend：Type属性设置，默认是udp，也就是上面的情况，此时flanneld进程监听的8285端口，其实还支持vxLan等类型，当type=vxLan时，flanneld监听8472端口，配置如下：
+
+```json
+{
+      "Network": "182.48.0.0/16",
+      "Backend": {
+      	"Type": "vxlan"
+      }
+}
+```
+
+封装数据包时就使用了vxLan协议，通过抓包可以查看到，这里不再详细描述，k8s中flannel就是配置的vxLan协议。
+
 ### 路由机制实现容器跨主机通信
 
 环境：
