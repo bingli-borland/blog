@@ -51,7 +51,9 @@ Context可以配置的属性集合：
 <Context docBase='E:\project\tomcat\webapps1\manager'/>
 ```
 
-此方式和上面的方式差不多，且不需要配置path，配置了也不起作用 （根据上面对path的解释），但是此种方式涉及到一个重要的类HostConfig，继承自LifecyceListener，这个类同样是digester解析规则配置Host元素时，通过LifecycleListenerRule添加给Host的一个监听器。
+此方式和上面的方式差不多，且不需要配置path，配置了也不起作用 （根据上面对path的解释），但是此种方式涉及到一个重要的类HostConfig，继承自LifecyceListener，这个类同样是digester解析规则配置Host元素时，通过LifecycleListenerRule添加给Host的一个监听器。context.xml中path不生效原因如下：
+
+![](path.jpg)
 
 #### HostConfig
 
