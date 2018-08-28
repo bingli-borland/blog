@@ -435,5 +435,35 @@ E:\project\TOMCAT_7_0_83\output\build\conf>keytool --import -noprompt -v -alias 
 
 ![](Tomcat安全—HTTPS/client.jpg)
 
-除了通过jdk的keytool制作证书外，通过openssl也可以制作证书，可自行网上查阅，也可以参考这篇文章[httpd设置HTTPS双向认证 ](https://blog.csdn.net/zhulianhai0927/article/details/52233355)，流程和keytool先查不多。关于https的其他配置可以参考tomcat的文档，下一篇会继续讲https，通过wireshark工具分析https的握手过程以及异常情况。
+除了通过jdk的keytool制作证书外，通过openssl也可以制作证书，可自行网上查阅，也可以参考这篇文章[httpd设置HTTPS双向认证 ](https://blog.csdn.net/zhulianhai0927/article/details/52233355)，流程和keytool先差不多。
+
+### HTTP/2.0
+
+之前已经tomcat如何配置https，下面介绍下tomcat如何支持http2，因为http2是在https基础之上实现的。由于目前jdk8及以下版本JSSE还没有支持ALPN协议，因此配置环境在jdk10下进行，如果实在想用jdk8或者以下版本，则可以选择openssl的方式配置https，此处不再描述。这里使用上面创建的自签名证书server.keystore
+
+#### 配置
+
+tomcat的server.xml中配置：
+
+```xml
+<Connector port="8443" protocol="org.apache.coyote.http11.Http11NioProtocol" 		scheme="https" secure="true" keystoreFile="conf/security/keystore.jks" keystorePass="changeit"  maxThreads="150" SSLEnabled="true" >
+     <UpgradeProtocol className="org.apache.coyote.http2.Http2Protocol" />
+</Connector>
+```
+
+启动tomcat后，通过https://localhost:8443/访问，查看访问日志如下即可：
+
+```xml
+0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET / HTTP/2.0" 200 11230
+0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /tomcat.png HTTP/2.0" 200 5103
+0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /tomcat.css HTTP/2.0" 200 5581
+0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /bg-middle.png HTTP/2.0" 200 1918
+0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /bg-nav.png HTTP/2.0" 200 1401
+0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /bg-upper.png HTTP/2.0" 200 3103
+0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /bg-button.png HTTP/2.0" 200 713
+0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /asf-logo-wide.svg HTTP/2.0" 200 27235
+0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:38 +0800] "GET /favicon.ico HTTP/2.0" 200 21630
+```
+
+关于https的其他配置可以参考tomcat的文档，下一篇会继续讲https，通过wireshark工具分析https的握手过程以及异常情况。
 
