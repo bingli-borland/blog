@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/blog/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/blog/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/blog/css/main.css?v=5.1.3" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/blog/images/apple-touch-icon-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/blog/images/favicon-32x32-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/blog/images/favicon-16x16-next.png?v=5.1.3">
+
+
+  <link rel="mask-icon" href="/blog/images/logo.svg?v=5.1.3" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="java,tomcat,https,keytool,">
+
+
+
+
+
+  <link rel="alternate" href="/blog/atom.xml" title="技术与生活" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="前言之前已经通过startup.bat脚本启动tomcat，浏览器中输入 http://localhost:8080 来访问tomcat的管理页面。通过wireshark或者其他的协议分析工具，可以轻松的分析出整个访问的过程和报文，那么，Tomcat就不能加密传输数据吗？答案就是HTTPS 基本概念协议1、HTTP 协议（HyperText Transfer Protocol，超文本传输协议）：是">
+<meta name="keywords" content="java,tomcat,https,keytool">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tomcat安全—HTTPS">
+<meta property="og:url" content="https://bingli-borland.github.io/blog/2018/05/07/Tomcat安全—HTTPS/index.html">
+<meta property="og:site_name" content="技术与生活">
+<meta property="og:description" content="前言之前已经通过startup.bat脚本启动tomcat，浏览器中输入 http://localhost:8080 来访问tomcat的管理页面。通过wireshark或者其他的协议分析工具，可以轻松的分析出整个访问的过程和报文，那么，Tomcat就不能加密传输数据吗？答案就是HTTPS 基本概念协议1、HTTP 协议（HyperText Transfer Protocol，超文本传输协议）：是">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/05/07/Tomcat安全—HTTPS/error.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/05/07/Tomcat安全—HTTPS/ok.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/05/07/Tomcat安全—HTTPS/client.jpg">
+<meta property="og:updated_time" content="2018-05-07T13:11:56.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tomcat安全—HTTPS">
+<meta name="twitter:description" content="前言之前已经通过startup.bat脚本启动tomcat，浏览器中输入 http://localhost:8080 来访问tomcat的管理页面。通过wireshark或者其他的协议分析工具，可以轻松的分析出整个访问的过程和报文，那么，Tomcat就不能加密传输数据吗？答案就是HTTPS 基本概念协议1、HTTP 协议（HyperText Transfer Protocol，超文本传输协议）：是">
+<meta name="twitter:image" content="https://bingli-borland.github.io/blog/2018/05/07/Tomcat安全—HTTPS/error.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/blog/',
+    scheme: 'Gemini',
+    version: '5.1.3',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://bingli-borland.github.io/blog/2018/05/07/Tomcat安全—HTTPS/">
+
+
+
+
+
+  <title>Tomcat安全—HTTPS | 技术与生活</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/blog/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术与生活</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/blog/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/blog/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/blog/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/blog/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/blog/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://bingli-borland.github.io/blog/blog/2018/05/07/Tomcat安全—HTTPS/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Bing Li">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/blog/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术与生活">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Tomcat安全—HTTPS</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-05-07T21:11:56+08:00">
+                2018-05-07
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/blog/categories/tomcat/" itemprop="url" rel="index">
+                    <span itemprop="name">tomcat</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/blog/2018/05/07/Tomcat安全—HTTPS/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count gitment-comments-count" data-xid="/blog/2018/05/07/Tomcat安全—HTTPS/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/blog/2018/05/07/Tomcat安全—HTTPS/" class="leancloud_visitors" data-flag-title="Tomcat安全—HTTPS">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>之前已经通过startup.bat脚本启动tomcat，浏览器中输入 <a href="http://localhost:8080" target="_blank" rel="noopener">http://localhost:8080</a> 来访问tomcat的管理页面。通过wireshark或者其他的协议分析工具，可以轻松的分析出整个访问的过程和报文，那么，Tomcat就不能加密传输数据吗？答案就是HTTPS</p>
+<h3 id="基本概念"><a href="#基本概念" class="headerlink" title="基本概念"></a>基本概念</h3><h4 id="协议"><a href="#协议" class="headerlink" title="协议"></a>协议</h4><p>1、HTTP 协议（HyperText Transfer Protocol，超文本传输协议）：是客户端浏览器或其他程序与Web服务器之间的应用层通信协议 。</p>
+<p>2、HTTPS 协议（HyperText Transfer Protocol over Secure Socket Layer）：可以理解为HTTP+SSL/TLS， 即 HTTP 下加入 SSL 层，HTTPS 的安全基础是 SSL，用于安全的 HTTP 数据传输。由于安全问题，SSL目前已经很少被使用，大部分网站都是用TLS，两者的关系大致如下：TLS1.0建立在SSL3.0基础上，可以理解为SSL3.1，常用的 TLS 协议版本还有如下几个：TLS1.2, TLS1.1 </p>
+<p>如下所示 HTTPS 相比 HTTP 多了一层 SSL/TLS</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">http    https</span><br><span class="line">  |       |</span><br><span class="line"> tcp   ssl/tls</span><br><span class="line">  |       |</span><br><span class="line">  ip     tcp</span><br><span class="line">          |</span><br><span class="line">          ip</span><br></pre></td></tr></table></figure>
+<a id="more"></a>
+<h4 id="加密算法"><a href="#加密算法" class="headerlink" title="加密算法"></a>加密算法</h4><h5 id="对称加密"><a href="#对称加密" class="headerlink" title="对称加密"></a>对称加密</h5><p>有流式、分组两种，加密和解密都是使用的同一个密钥。</p>
+<p>例如：DES、AES-GCM、ChaCha20-Poly1305等</p>
+<h5 id="非对称加密"><a href="#非对称加密" class="headerlink" title="非对称加密"></a>非对称加密</h5><p>非对称加密使用一对“私钥-公钥”，用私钥加密的内容只有对应公钥才能解开，反之亦然。非对称加密有以下特性：</p>
+<ul>
+<li>对于一个公钥，有且只有一个对应的私钥。</li>
+<li>公钥是公开的，并且不能通过公钥反推出私钥。</li>
+<li>通过私钥加密的密文只能通过公钥能解密，通过公钥加密的密文也只能通过私钥能解密</li>
+<li>公钥和算法都是公开的，私钥是保密的。</li>
+<li>非对称加密算法性能较低，但是安全性超强，由于其加密特性，非对称加密算法能加密的数据长度也是有限的。</li>
+</ul>
+<p>例如：RSA、DSA、ECDSA、 DH、ECDHE</p>
+<h4 id="摘要算法（哈希算法）"><a href="#摘要算法（哈希算法）" class="headerlink" title="摘要算法（哈希算法）"></a>摘要算法（哈希算法）</h4><p>将任意长度的信息转换为较短的固定长度的值，通常其长度要比信息小得多，且算法不可逆。摘要算法有以下特性：</p>
+<ul>
+<li><p>只要源文本不同，计算得到的结果，必然不同（或者说机会很少）。</p>
+</li>
+<li><p>无法从结果反推出源数据。</p>
+</li>
+</ul>
+<p>基于以上特性，我们一般使用摘要算法来校验原始内容是否被篡改。例如：MD5、SHA-1、SHA-2、SHA-256 等</p>
+<h4 id="数字签名"><a href="#数字签名" class="headerlink" title="数字签名"></a>数字签名</h4><p>用<strong>摘要算法</strong>提取出源文件的摘要并用私钥进行加密后的内容，再和源文件信息一起发送，以保证这个hash值不被修改。</p>
+<h3 id="例子"><a href="#例子" class="headerlink" title="例子"></a>例子</h3><p>1、A有一对私钥和公钥，并将公钥发给了B。</p>
+<p>2、B要给A写信，用A的公钥加密确保信件不能被其他人读取。A收到信后，用私钥解密，就看到了信件内容。注意：只要A的私钥不泄露，这封信就是安全的，即使落在别人手里，也无法解密。</p>
+<p>3、 A给B回信，A写完信件后先用Hash函数，生成信件的摘要（digest） ，然后使用私钥，对这个摘要加密，生成”数字签名”（signature）。将这个签名，附在信件下面，一起发给B。B收信后，取下数字签名，用A的公钥解密，得到信件的摘要。由此证明，这封信确实是A发出的 ，同时B对信件本身使用Hash函数，将得到的结果，与上一步得到的摘要进行对比。如果两者一致，就证明这封信未被修改过。 </p>
+<p>4、一个问题出现了，C想欺骗B，他偷偷使用了B的电脑，用自己的公钥换走了A的公钥。此时，B实际拥有的是C的公钥，但是还以为这是A的公钥。因此，C就可以冒充A，用自己的私钥做成”数字签名”，写信给B，让B用假的A公钥进行解密。 B一直以为是和A在写信。过了一段时间，B感觉不对劲，发现自己无法确定公钥是否真的属于A。她想到了一个办法，要求A去找”证书中心”（certificate authority，简称CA），为公钥做认证。证书中心用自己的私钥，对A的公钥和一些相关信息一起加密，生成”数字证书”（Digital Certificate） ，A拿到数字证书以后，就可以放心了。以后再给B写信，只要在签名的同时，再附上数字证书就行了 ，B收信后，用CA的公钥解开数字证书，得到对应的证书摘要，并根据证书签名使用的hash算法，计算出当前证书的摘要，相比较2个摘要，判断证书是否被修改过。同时也可以拿到A真实的公钥了，只要CA证书安全，A的公钥就是安全的。 </p>
+<p>数字签名和数字证书是两个不同的概念:</p>
+<blockquote>
+<p>数字签名是内容提供方用自己的私钥对内容摘要（MD5、SHA）非对称加密</p>
+<p>数字证书是 CA 用自己的私钥对证书内容的摘要非对称加密从而确保证书内的用户合法拥有证书里列出的公钥。</p>
+</blockquote>
+<p>了解了概念，今天所说的https与RSA和数字签名密切相关。那么如何让tomcat支持https呢？下面我们来实践一下</p>
+<h3 id="自签名证书制作"><a href="#自签名证书制作" class="headerlink" title="自签名证书制作"></a>自签名证书制作</h3><p>keytool是jdk自带的一款ssl管理工具，jdk6和jdk7的keytool命令有些不同，jdk7的兼容jdk6的，这里用的是jdk7下的keytool 。制作一个简单的自签名证书：</p>
+<figure class="highlight bat"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br></pre></td><td class="code"><pre><span class="line">帮助信息：</span><br><span class="line"><span class="function">E:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">bin</span>&gt;<span class="title">keytool</span></span></span><br><span class="line"><span class="function">密钥和证书管理工具</span></span><br><span class="line"><span class="function">命令:</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"> -<span class="title">certreq</span>            生成证书请求</span></span><br><span class="line"><span class="function"> -<span class="title">changealias</span>        更改条目的别名</span></span><br><span class="line"><span class="function"> -<span class="title">delete</span>             删除条目</span></span><br><span class="line"><span class="function"> -<span class="title">exportcert</span>         导出证书</span></span><br><span class="line"><span class="function"> -<span class="title">genkeypair</span>         生成密钥对</span></span><br><span class="line"><span class="function"> -<span class="title">genseckey</span>          生成密钥</span></span><br><span class="line"><span class="function"> -<span class="title">gencert</span>            根据证书请求生成证书</span></span><br><span class="line"><span class="function"> -<span class="title">importcert</span>         导入证书或证书链</span></span><br><span class="line"><span class="function"> -<span class="title">importkeystore</span>     从其他密钥库导入一个或所有条目</span></span><br><span class="line"><span class="function"> -<span class="title">keypasswd</span>          更改条目的密钥口令</span></span><br><span class="line"><span class="function"> -<span class="title">list</span>               列出密钥库中的条目</span></span><br><span class="line"><span class="function"> -<span class="title">printcert</span>          打印证书内容</span></span><br><span class="line"><span class="function"> -<span class="title">printcertreq</span>       打印证书请求的内容</span></span><br><span class="line"><span class="function"> -<span class="title">printcrl</span>           打印 <span class="title">CRL</span> 文件的内容</span></span><br><span class="line"><span class="function"> -<span class="title">storepasswd</span>        更改密钥库的存储口令</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">使用 "<span class="title">keytool</span> -<span class="title">command_name</span> -<span class="title">help</span>" 获取 <span class="title">command_name</span> 的用法</span></span><br><span class="line"><span class="function"><span class="title">E</span>:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">bin</span>&gt;<span class="title">keytool</span> -<span class="title">genkeypair</span> -<span class="title">help</span></span></span><br><span class="line"><span class="function"><span class="title">keytool</span> -<span class="title">genkeypair</span> [<span class="title">OPTION</span>]...</span></span><br><span class="line"><span class="function">生成密钥对</span></span><br><span class="line"><span class="function">选项:</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"> -<span class="title">alias</span> &lt;<span class="title">alias</span>&gt;                  要处理的条目的别名</span></span><br><span class="line"><span class="function"> -<span class="title">keyalg</span> &lt;<span class="title">keyalg</span>&gt;                密钥算法名称</span></span><br><span class="line"><span class="function"> -<span class="title">keysize</span> &lt;<span class="title">keysize</span>&gt;              密钥位大小</span></span><br><span class="line"><span class="function"> -<span class="title">sigalg</span> &lt;<span class="title">sigalg</span>&gt;                签名算法名称</span></span><br><span class="line"><span class="function"> -<span class="title">destalias</span> &lt;<span class="title">destalias</span>&gt;          目标别名</span></span><br><span class="line"><span class="function"> -<span class="title">dname</span> &lt;<span class="title">dname</span>&gt;                  唯一判别名</span></span><br><span class="line"><span class="function"> -<span class="title">startdate</span> &lt;<span class="title">startdate</span>&gt;          证书有效期开始日期/时间</span></span><br><span class="line"><span class="function"> -<span class="title">ext</span> &lt;<span class="title">value</span>&gt;                    <span class="title">X</span>.509 扩展</span></span><br><span class="line"><span class="function"> -<span class="title">validity</span> &lt;<span class="title">valDays</span>&gt;             有效天数</span></span><br><span class="line"><span class="function"> -<span class="title">keypass</span> &lt;<span class="title">arg</span>&gt;                  密钥口令</span></span><br><span class="line"><span class="function"> -<span class="title">keystore</span> &lt;<span class="title">keystore</span>&gt;            密钥库名称</span></span><br><span class="line"><span class="function"> -<span class="title">storepass</span> &lt;<span class="title">arg</span>&gt;                密钥库口令</span></span><br><span class="line"><span class="function"> -<span class="title">storetype</span> &lt;<span class="title">storetype</span>&gt;          密钥库类型</span></span><br><span class="line"><span class="function"> -<span class="title">providername</span> &lt;<span class="title">providername</span>&gt;    提供方名称</span></span><br><span class="line"><span class="function"> -<span class="title">providerclass</span> &lt;<span class="title">providerclass</span>&gt;  提供方类名</span></span><br><span class="line"><span class="function"> -<span class="title">providerarg</span> &lt;<span class="title">arg</span>&gt;              提供方参数</span></span><br><span class="line"><span class="function"> -<span class="title">providerpath</span> &lt;<span class="title">pathlist</span>&gt;        提供方类路径</span></span><br><span class="line"><span class="function"> -<span class="title">v</span>                              详细输出</span></span><br><span class="line"><span class="function"> -<span class="title">protected</span>                      通过受保护的机制的口令</span></span><br><span class="line"><span class="function"> </span></span><br><span class="line"><span class="function">制作：</span></span><br><span class="line"><span class="function"><span class="title">keytool</span> -<span class="title">genkeypair</span> -<span class="title">v</span> -<span class="title">alias</span> <span class="title">tomcat</span> -<span class="title">keyalg</span> <span class="title">RSA</span> -<span class="title">validity</span> 3650 -<span class="title">keystore</span> <span class="title">server.keystore</span> -<span class="title">dname</span> "<span class="title">CN</span>=<span class="title">www.bingli.com</span>,<span class="title">OU</span>=<span class="title">cn</span>,<span class="title">O</span>=<span class="title">cn</span>,<span class="title">L</span>=<span class="title">cn</span>,<span class="title">ST</span>=<span class="title">cn</span>,<span class="title">c</span>=<span class="title">cn</span>" -<span class="title">storepass</span> <span class="title">changeit</span> -<span class="title">keypass</span> <span class="title">changeit</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">查看：</span></span><br><span class="line"><span class="function"><span class="title">E</span>:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">conf</span>&gt;<span class="title">keytool</span> -<span class="title">list</span> -<span class="title">v</span> -<span class="title">keystore</span> <span class="title">server.keystore</span></span></span><br><span class="line"><span class="function">输入密钥库口令:</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">密钥库类型: <span class="title">JKS</span></span></span><br><span class="line"><span class="function">密钥库提供方: <span class="title">SUN</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">您的密钥库包含 1 个条目</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">别名: <span class="title">tomcat</span></span></span><br><span class="line"><span class="function">创建日期: 2018-5-7</span></span><br><span class="line"><span class="function">条目类型: <span class="title">PrivateKeyEntry</span></span></span><br><span class="line"><span class="function">证书链长度: 1</span></span><br><span class="line"><span class="function">证书[1]:</span></span><br><span class="line"><span class="function">所有者: <span class="title">CN</span>=<span class="title">www.bingli.com</span>, <span class="title">OU</span>=<span class="title">cn</span>, <span class="title">O</span>=<span class="title">cn</span>, <span class="title">L</span>=<span class="title">cn</span>, <span class="title">ST</span>=<span class="title">cn</span>, <span class="title">C</span>=<span class="title">cn</span></span></span><br><span class="line"><span class="function">发布者: <span class="title">CN</span>=<span class="title">www.bingli.com</span>, <span class="title">OU</span>=<span class="title">cn</span>, <span class="title">O</span>=<span class="title">cn</span>, <span class="title">L</span>=<span class="title">cn</span>, <span class="title">ST</span>=<span class="title">cn</span>, <span class="title">C</span>=<span class="title">cn</span></span></span><br><span class="line"><span class="function">序列号: 357<span class="title">e6e93</span></span></span><br><span class="line"><span class="function">有效期开始日期: <span class="title">Mon</span> <span class="title">May</span> 07 22:08:53 <span class="title">CST</span> 2018, 截止日期: <span class="title">Thu</span> <span class="title">May</span> 04 22:08:53 <span class="title">CST</span> 2028</span></span><br><span class="line"><span class="function">证书指纹:</span></span><br><span class="line"><span class="function">         <span class="title">MD5</span>: 84:<span class="title">E7</span>:50:5<span class="title">D</span>:64:6<span class="title">A:A7</span>:00:92:66:07:<span class="title">FD:A5</span>:01:9<span class="title">E</span>:16</span></span><br><span class="line"><span class="function">         <span class="title">SHA1</span>: <span class="title">D1</span>:42:<span class="title">F8:D5</span>:27:30:<span class="title">AD:E5</span>:61:<span class="title">A3:B6</span>:<span class="title">BA</span>:4<span class="title">D</span>:05:<span class="title">F6</span>:1<span class="title">D:CF</span>:7<span class="title">C</span>:7<span class="title">F</span>:98</span></span><br><span class="line"><span class="function">         <span class="title">SHA256</span>: 9<span class="title">D</span>:1<span class="title">F</span>:83:34:<span class="title">C2</span>:2<span class="title">D</span>:35:<span class="title">B9:A6</span>:<span class="title">EE</span>:19:<span class="title">CC</span>:52:08:<span class="title">E9</span>:6<span class="title">B</span>:8<span class="title">E:D2</span>:32:9<span class="title">A</span>:4<span class="title">F</span>:3<span class="title">E</span>:7<span class="title">B:E1</span>:86:<span class="title">C7</span>:9<span class="title">C</span>:0<span class="title">B</span>:65:26:90:4<span class="title">C</span></span></span><br><span class="line"><span class="function">         签名算法名称: <span class="title">SHA256withRSA</span></span></span><br><span class="line"><span class="function">         版本: 3</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">扩展:</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">#1: <span class="title">ObjectId</span>: 2.5.29.14 <span class="title">Criticality</span>=<span class="title">false</span></span></span><br><span class="line"><span class="function"><span class="title">SubjectKeyIdentifier</span> [</span></span><br><span class="line"><span class="function"><span class="title">KeyIdentifier</span> [</span></span><br><span class="line"><span class="function">0000: 2<span class="title">D</span> <span class="title">F3</span> <span class="title">F3</span> 00 49 <span class="title">E0</span> <span class="title">F8</span> 81   <span class="title">D5</span> <span class="title">B2</span> 33 22 9<span class="title">B</span> <span class="title">B3</span> 7<span class="title">E</span> <span class="title">FD</span>  -...<span class="title">I</span>.....3"....</span></span><br><span class="line"><span class="function">0010: 6<span class="title">D</span> 8<span class="title">C</span> <span class="title">AC</span> 02                                        <span class="title">m</span>...</span></span><br><span class="line"><span class="function">]</span></span><br><span class="line"><span class="function">]</span></span><br><span class="line"><span class="function">一个自签名的证书就制作完成了。</span></span><br></pre></td></tr></table></figure>
+<h3 id="Tomcat配置https单向认证"><a href="#Tomcat配置https单向认证" class="headerlink" title="Tomcat配置https单向认证"></a>Tomcat配置https单向认证</h3><p>tomcat的server.xml中配置：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Connector</span> <span class="attr">port</span>=<span class="string">"8443"</span> <span class="attr">protocol</span>=<span class="string">"org.apache.coyote.http11.Http11Protocol"</span></span></span><br><span class="line"><span class="tag">               <span class="attr">maxThreads</span>=<span class="string">"150"</span> <span class="attr">SSLEnabled</span>=<span class="string">"true"</span> <span class="attr">scheme</span>=<span class="string">"https"</span> <span class="attr">secure</span>=<span class="string">"true"</span> </span></span><br><span class="line"><span class="tag">               <span class="attr">keystoreFile</span>=<span class="string">"conf/server.keystore"</span> <span class="attr">keystorePass</span>=<span class="string">"changeit"</span></span></span><br><span class="line"><span class="tag">               <span class="attr">clientAuth</span>=<span class="string">"false"</span> <span class="attr">sslProtocol</span>=<span class="string">"TLS"</span> /&gt;</span></span><br></pre></td></tr></table></figure>
+<p>然后浏览器访问：<a href="http://localhost:8443/examples/servlets/servlet/RequestParamExample" target="_blank" rel="noopener">http://localhost:8443/examples/servlets/servlet/RequestParamExample</a> 发现访问失败，肯定那，因为8443端口现在已经启用了https，所以改成如下 <a href="https://localhost:8443/examples/servlets/servlet/RequestParamExample" target="_blank" rel="noopener">https://localhost:8443/examples/servlets/servlet/RequestParamExample</a> 即可访问，但是可能会遇到问题，浏览器提示localhost:8443 使用了无效的安全证书。 </p>
+<p>1、该证书因为其自签名而不被信任</p>
+<p>因为是自签名证书，没有经过CA认证中心签发，因此浏览器会提示不被信任。</p>
+<p>2、 该证书对名称 localhost 无效</p>
+<p>因为访问的地址是localhost，但是证书中CN=www.bingli.com，因此浏览器也会提示localhost无效</p>
+<p>可以通过添加例外就能忽略掉上面的异常信息，才能正常访问。下面我们来解决上面的两个问题。</p>
+<h4 id="自签名证书不被信任"><a href="#自签名证书不被信任" class="headerlink" title="自签名证书不被信任"></a>自签名证书不被信任</h4><p>这就涉及到CA根证书的问题，由于去CA认证中心做认证太贵了，我们可以自己做一个CA根证书，然后签发一个二级证书配置到tomcat中，最后在浏览器中导入CA根证书即可</p>
+<figure class="highlight bat"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">1</span>.制作根证书，保存在密钥库mykeystore中</span><br><span class="line"><span class="function">E:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">conf</span>&gt;<span class="title">keytool</span> -<span class="title">genkeypair</span> -<span class="title">v</span> -<span class="title">alias</span> <span class="title">rootca</span> -<span class="title">keyalg</span> <span class="title">RSA</span>   -<span class="title">validity</span> 3650  -<span class="title">dname</span> "<span class="title">CN</span>=<span class="title">CA</span>,<span class="title">OU</span>=<span class="title">CA</span>,<span class="title">O</span>=<span class="title">CA</span>,<span class="title">L</span>=<span class="title">CA</span>,<span class="title">ST</span>=<span class="title">CA</span>"  -<span class="title">storepass</span> <span class="title">changeit</span>  -<span class="title">keypass</span> <span class="title">changeit</span> -<span class="title">keystore</span> <span class="title">mykeystore</span></span></span><br><span class="line"><span class="function">正在为以下对象生成 2,048 位<span class="title">RSA</span>密钥对和自签名证书 (<span class="title">SHA256withRSA</span>) (有效期为 3,650 天):</span></span><br><span class="line"><span class="function">         <span class="title">CN</span>=<span class="title">CA</span>, <span class="title">OU</span>=<span class="title">CA</span>, <span class="title">O</span>=<span class="title">CA</span>, <span class="title">L</span>=<span class="title">CA</span>, <span class="title">ST</span>=<span class="title">CA</span></span></span><br><span class="line"><span class="function">[正在存储<span class="title">mykeystore</span>]</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">2.制作二级证书，保存在密钥库<span class="title">mykeystore</span>中</span></span><br><span class="line"><span class="function"><span class="title">E</span>:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">conf</span>&gt;<span class="title">keytool</span> -<span class="title">genkeypair</span> -<span class="title">v</span> -<span class="title">alias</span> <span class="title">bingli</span> -<span class="title">keyalg</span> <span class="title">RSA</span>   -<span class="title">validity</span> 3650 -<span class="title">dname</span> "<span class="title">CN</span>=<span class="title">www.bingli.com</span>,<span class="title">OU</span>=<span class="title">bingli</span>,<span class="title">O</span>=<span class="title">bingli</span>,<span class="title">L</span>=<span class="title">bingli</span>,<span class="title">ST</span>=<span class="title">bingli</span>" -<span class="title">storepass</span> <span class="title">changeit</span>  -<span class="title">keypass</span> <span class="title">changeit</span> -<span class="title">keystore</span> <span class="title">mykeystore</span></span></span><br><span class="line"><span class="function">正在为以下对象生成 2,048 位<span class="title">RSA</span>密钥对和自签名证书 (<span class="title">SHA256withRSA</span>) (有效期为 3,650 天):</span></span><br><span class="line"><span class="function">         <span class="title">CN</span>=<span class="title">www.bingli.com</span>, <span class="title">OU</span>=<span class="title">bingli</span>, <span class="title">O</span>=<span class="title">bingli</span>, <span class="title">L</span>=<span class="title">bingli</span>, <span class="title">ST</span>=<span class="title">bingli</span></span></span><br><span class="line"><span class="function">[正在存储<span class="title">mykeystore</span>]</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">现在密钥库<span class="title">mykeystore</span>中存在两个条目，可以通过<span class="title">list</span>查看</span></span><br><span class="line"><span class="function"><span class="title">E</span>:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">conf</span>&gt;<span class="title">keytool</span> -<span class="title">list</span> -<span class="title">v</span> -<span class="title">keystore</span> <span class="title">mykeystore</span> -<span class="title">storepass</span> <span class="title">changeit</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">密钥库类型: <span class="title">JKS</span></span></span><br><span class="line"><span class="function">密钥库提供方: <span class="title">SUN</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">您的密钥库包含 2 个条目</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">别名: <span class="title">rootca</span></span></span><br><span class="line"><span class="function">创建日期: 2018-5-8</span></span><br><span class="line"><span class="function">条目类型: <span class="title">PrivateKeyEntry</span></span></span><br><span class="line"><span class="function">证书链长度: 1</span></span><br><span class="line"><span class="function">证书[1]:</span></span><br><span class="line"><span class="function">所有者: <span class="title">CN</span>=<span class="title">CA</span>, <span class="title">OU</span>=<span class="title">CA</span>, <span class="title">O</span>=<span class="title">CA</span>, <span class="title">L</span>=<span class="title">CA</span>, <span class="title">ST</span>=<span class="title">CA</span></span></span><br><span class="line"><span class="function">发布者: <span class="title">CN</span>=<span class="title">CA</span>, <span class="title">OU</span>=<span class="title">CA</span>, <span class="title">O</span>=<span class="title">CA</span>, <span class="title">L</span>=<span class="title">CA</span>, <span class="title">ST</span>=<span class="title">CA</span></span></span><br><span class="line"><span class="function">序列号: 700<span class="title">d296d</span></span></span><br><span class="line"><span class="function">有效期开始日期: <span class="title">Tue</span> <span class="title">May</span> 08 17:18:36 <span class="title">CST</span> 2018, 截止日期: <span class="title">Fri</span> <span class="title">May</span> 05 17:18:36 <span class="title">CST</span> 2028</span></span><br><span class="line"><span class="function">证书指纹:</span></span><br><span class="line"><span class="function">         <span class="title">MD5</span>: 4<span class="title">B</span>:85:2<span class="title">D:A5</span>:97:<span class="title">C2:DA</span>:85:6<span class="title">C</span>:69:<span class="title">E7</span>:6<span class="title">D</span>:5<span class="title">A</span>:89:84:<span class="title">E1</span></span></span><br><span class="line"><span class="function">         <span class="title">SHA1</span>: <span class="title">D4</span>:41:64:<span class="title">F3:B6</span>:<span class="title">AE</span>:70:<span class="title">DC:DF</span>:84:<span class="title">B5</span>:40:51:5<span class="title">D</span>:59:<span class="title">D6:D2</span>:2<span class="title">A</span>:11:<span class="title">C1</span></span></span><br><span class="line"><span class="function">         <span class="title">SHA256</span>: <span class="title">CE</span>:5<span class="title">C</span>:79:<span class="title">FD</span>:90:<span class="title">F6:E7</span>:<span class="title">FC</span>:9<span class="title">C:F8</span>:06:08:2<span class="title">A</span>:9<span class="title">B:C3</span>:<span class="title">B0</span>:26:08:83:52:<span class="title">FA</span>:63:<span class="title">EF</span>:03:3<span class="title">B</span>:9<span class="title">E:A0</span>:26:3<span class="title">D</span>:61:6<span class="title">E:F6</span></span></span><br><span class="line"><span class="function">         签名算法名称: <span class="title">SHA256withRSA</span></span></span><br><span class="line"><span class="function">         版本: 3</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">扩展:</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">#1: <span class="title">ObjectId</span>: 2.5.29.14 <span class="title">Criticality</span>=<span class="title">false</span></span></span><br><span class="line"><span class="function"><span class="title">SubjectKeyIdentifier</span> [</span></span><br><span class="line"><span class="function"><span class="title">KeyIdentifier</span> [</span></span><br><span class="line"><span class="function">0000: 03 <span class="title">C7</span> 37 <span class="title">E8</span> <span class="title">C2</span> 2<span class="title">D</span> 9<span class="title">F</span> 68   1<span class="title">B</span> 3<span class="title">D</span> <span class="title">AD</span> <span class="title">E6</span> <span class="title">DF</span> <span class="title">C3</span> <span class="title">FC</span> <span class="title">E5</span>  ..7..-.<span class="title">h</span>.=......</span></span><br><span class="line"><span class="function">0010: 7<span class="title">C</span> 90 64 <span class="title">CB</span>                                        ..<span class="title">d</span>.</span></span><br><span class="line"><span class="function">]</span></span><br><span class="line"><span class="function">]</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">*******************************************</span></span><br><span class="line"><span class="function">*******************************************</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">别名: <span class="title">bingli</span></span></span><br><span class="line"><span class="function">创建日期: 2018-5-8</span></span><br><span class="line"><span class="function">条目类型: <span class="title">PrivateKeyEntry</span></span></span><br><span class="line"><span class="function">证书链长度: 1</span></span><br><span class="line"><span class="function">证书[1]:</span></span><br><span class="line"><span class="function">所有者: <span class="title">CN</span>=<span class="title">www.bingli.com</span>, <span class="title">OU</span>=<span class="title">bingli</span>, <span class="title">O</span>=<span class="title">bingli</span>, <span class="title">L</span>=<span class="title">bingli</span>, <span class="title">ST</span>=<span class="title">bingli</span></span></span><br><span class="line"><span class="function">发布者: <span class="title">CN</span>=<span class="title">www.bingli.com</span>, <span class="title">OU</span>=<span class="title">bingli</span>, <span class="title">O</span>=<span class="title">bingli</span>, <span class="title">L</span>=<span class="title">bingli</span>, <span class="title">ST</span>=<span class="title">bingli</span></span></span><br><span class="line"><span class="function">序列号: <span class="title">b55f388</span></span></span><br><span class="line"><span class="function">有效期开始日期: <span class="title">Tue</span> <span class="title">May</span> 08 17:22:34 <span class="title">CST</span> 2018, 截止日期: <span class="title">Fri</span> <span class="title">May</span> 05 17:22:34 <span class="title">CST</span> 2028</span></span><br><span class="line"><span class="function">证书指纹:</span></span><br><span class="line"><span class="function">         <span class="title">MD5</span>: 29:13:<span class="title">C3:A8</span>:73:<span class="title">E6:B1</span>:22:99:<span class="title">B6</span>:73:15:62:29:95:<span class="title">C9</span></span></span><br><span class="line"><span class="function">         <span class="title">SHA1</span>: 3<span class="title">C</span>:93:<span class="title">A6:DF</span>:3<span class="title">A:DB</span>:60:<span class="title">B4:ED</span>:70:7<span class="title">B</span>:42:<span class="title">CC</span>:51:69:3<span class="title">E</span>:44:<span class="title">A9</span>:49:2<span class="title">B</span></span></span><br><span class="line"><span class="function">         <span class="title">SHA256</span>: 2<span class="title">B:AC</span>:01:<span class="title">AC:BF</span>:<span class="title">E6</span>:9<span class="title">E</span>:9<span class="title">A:FA</span>:<span class="title">EE</span>:62:<span class="title">CE</span>:62:7<span class="title">C</span>:8<span class="title">C:E4</span>:51:<span class="title">D1:A0</span>:27:55:<span class="title">CF</span>:4<span class="title">E:BB</span>:8<span class="title">B</span>:83:<span class="title">DB:C1</span>:09:<span class="title">CA:EF</span>:24</span></span><br><span class="line"><span class="function">         签名算法名称: <span class="title">SHA256withRSA</span></span></span><br><span class="line"><span class="function">         版本: 3</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">扩展:</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">#1: <span class="title">ObjectId</span>: 2.5.29.14 <span class="title">Criticality</span>=<span class="title">false</span></span></span><br><span class="line"><span class="function"><span class="title">SubjectKeyIdentifier</span> [</span></span><br><span class="line"><span class="function"><span class="title">KeyIdentifier</span> [</span></span><br><span class="line"><span class="function">0000: 67 68 <span class="title">F6</span> 7<span class="title">E</span> <span class="title">E9</span> 2<span class="title">E</span> <span class="title">EB</span> 2<span class="title">B</span>   5<span class="title">E</span> <span class="title">BA</span> <span class="title">D8</span> <span class="title">A7</span> <span class="title">E0</span> <span class="title">BA</span> 0<span class="title">E</span> 3<span class="title">D</span>  <span class="title">gh</span>.....+^......=</span></span><br><span class="line"><span class="function">0010: 21 <span class="title">F0</span> 8<span class="title">D</span> 69                                        !..<span class="title">i</span></span></span><br><span class="line"><span class="function">]</span></span><br><span class="line"><span class="function">]</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">3.对二级证书生成证书请求</span></span><br><span class="line"><span class="function"><span class="title">E</span>:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">conf</span>&gt;<span class="title">keytool</span> -<span class="title">certreq</span> -<span class="title">alias</span> <span class="title">bingli</span> -<span class="title">file</span> <span class="title">bingli.csr</span>  -<span class="title">storepass</span> <span class="title">changeit</span>  -<span class="title">keypass</span> <span class="title">changeit</span> -<span class="title">keystore</span> <span class="title">mykeystore</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">4.通过<span class="title">CA</span>根证书来给刚才生成的证书请求做认证，生成认证之后的证书</span></span><br><span class="line"><span class="function"><span class="title">E</span>:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">conf</span>&gt;<span class="title">keytool</span> -<span class="title">gencert</span> -<span class="title">alias</span> <span class="title">rootca</span> -<span class="title">infile</span> <span class="title">bingli.csr</span> -<span class="title">outfile</span> <span class="title">bingli.cer</span>  -<span class="title">storepass</span> <span class="title">changeit</span>  -<span class="title">keypass</span> <span class="title">changeit</span> -<span class="title">keystore</span> <span class="title">mykeystore</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">5.将认证之后的证书导入密钥库</span></span><br><span class="line"><span class="function"><span class="title">E</span>:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">conf</span>&gt;<span class="title">keytool</span> -<span class="title">importcert</span>  -<span class="title">alias</span> <span class="title">bingli</span>  -<span class="title">file</span> <span class="title">bingli.cer</span>   -<span class="title">storepass</span> <span class="title">changeit</span>  -<span class="title">keypass</span> <span class="title">changeit</span> -<span class="title">keystore</span> <span class="title">mykeystore</span></span></span><br><span class="line"><span class="function">证书回复已安装在密钥库中</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">再通过<span class="title">list</span>查看别名为<span class="title">bingli</span>的证书条目，会发现证书链长度为2，一个就是刚才认证之后的证书，所有者是<span class="title">bingli</span>，发布者是<span class="title">CA</span>，另一个就是<span class="title">CA</span>的证书。</span></span><br><span class="line"><span class="function"><span class="title">E</span>:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">conf</span>&gt;<span class="title">keytool</span> -<span class="title">list</span> -<span class="title">v</span> -<span class="title">alias</span> <span class="title">bingli</span> -<span class="title">keystore</span> <span class="title">mykeystore</span> -<span class="title">storepass</span> <span class="title">changeit</span></span></span><br><span class="line"><span class="function">别名: <span class="title">bingli</span></span></span><br><span class="line"><span class="function">创建日期: 2018-5-8</span></span><br><span class="line"><span class="function">条目类型: <span class="title">PrivateKeyEntry</span></span></span><br><span class="line"><span class="function">证书链长度: 2</span></span><br><span class="line"><span class="function">证书[1]:</span></span><br><span class="line"><span class="function">所有者: <span class="title">CN</span>=<span class="title">www.bingli.com</span>, <span class="title">OU</span>=<span class="title">bingli</span>, <span class="title">O</span>=<span class="title">bingli</span>, <span class="title">L</span>=<span class="title">bingli</span>, <span class="title">ST</span>=<span class="title">bingli</span></span></span><br><span class="line"><span class="function">发布者: <span class="title">CN</span>=<span class="title">CA</span>, <span class="title">OU</span>=<span class="title">CA</span>, <span class="title">O</span>=<span class="title">CA</span>, <span class="title">L</span>=<span class="title">CA</span>, <span class="title">ST</span>=<span class="title">CA</span></span></span><br><span class="line"><span class="function">序列号: 262<span class="title">f42ba</span></span></span><br><span class="line"><span class="function">有效期开始日期: <span class="title">Tue</span> <span class="title">May</span> 08 17:32:01 <span class="title">CST</span> 2018, 截止日期: <span class="title">Mon</span> <span class="title">Aug</span> 06 17:32:01 <span class="title">CST</span> 2018</span></span><br><span class="line"><span class="function">证书指纹:</span></span><br><span class="line"><span class="function">         <span class="title">MD5</span>: 17:<span class="title">E5:F0</span>:82:<span class="title">C1</span>:8<span class="title">E:D2</span>:7<span class="title">F</span>:85:6<span class="title">A</span>:9<span class="title">F:A3</span>:5<span class="title">E:CB</span>:90:1<span class="title">B</span></span></span><br><span class="line"><span class="function">         <span class="title">SHA1</span>: <span class="title">EE</span>:03:89:68:<span class="title">D9</span>:0<span class="title">E</span>:83:27:<span class="title">A8</span>:5<span class="title">B</span>:41:<span class="title">F2</span>:80:75:9<span class="title">D</span>:4<span class="title">A</span>:69:<span class="title">B6</span>:0<span class="title">C</span>:96</span></span><br><span class="line"><span class="function">         <span class="title">SHA256</span>: <span class="title">FA</span>:08:67:<span class="title">AB</span>:52:<span class="title">FF</span>:17:<span class="title">D8</span>:04:<span class="title">FB:C6</span>:<span class="title">BF:C0</span>:2<span class="title">D:A6</span>:<span class="title">CF</span>:3<span class="title">B</span>:9<span class="title">E</span>:78:82:<span class="title">E6</span>:9<span class="title">A</span>:94:<span class="title">B4:AE</span>:7<span class="title">F</span>:03:0<span class="title">E:E3</span>:92:62:00</span></span><br><span class="line"><span class="function">         签名算法名称: <span class="title">SHA256withRSA</span></span></span><br><span class="line"><span class="function">         版本: 3</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">扩展:</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">#1: <span class="title">ObjectId</span>: 2.5.29.35 <span class="title">Criticality</span>=<span class="title">false</span></span></span><br><span class="line"><span class="function"><span class="title">AuthorityKeyIdentifier</span> [</span></span><br><span class="line"><span class="function"><span class="title">KeyIdentifier</span> [</span></span><br><span class="line"><span class="function">0000: 03 <span class="title">C7</span> 37 <span class="title">E8</span> <span class="title">C2</span> 2<span class="title">D</span> 9<span class="title">F</span> 68   1<span class="title">B</span> 3<span class="title">D</span> <span class="title">AD</span> <span class="title">E6</span> <span class="title">DF</span> <span class="title">C3</span> <span class="title">FC</span> <span class="title">E5</span>  ..7..-.<span class="title">h</span>.=......</span></span><br><span class="line"><span class="function">0010: 7<span class="title">C</span> 90 64 <span class="title">CB</span>                                        ..<span class="title">d</span>.</span></span><br><span class="line"><span class="function">]</span></span><br><span class="line"><span class="function">]</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">#2: <span class="title">ObjectId</span>: 2.5.29.14 <span class="title">Criticality</span>=<span class="title">false</span></span></span><br><span class="line"><span class="function"><span class="title">SubjectKeyIdentifier</span> [</span></span><br><span class="line"><span class="function"><span class="title">KeyIdentifier</span> [</span></span><br><span class="line"><span class="function">0000: 67 68 <span class="title">F6</span> 7<span class="title">E</span> <span class="title">E9</span> 2<span class="title">E</span> <span class="title">EB</span> 2<span class="title">B</span>   5<span class="title">E</span> <span class="title">BA</span> <span class="title">D8</span> <span class="title">A7</span> <span class="title">E0</span> <span class="title">BA</span> 0<span class="title">E</span> 3<span class="title">D</span>  <span class="title">gh</span>.....+^......=</span></span><br><span class="line"><span class="function">0010: 21 <span class="title">F0</span> 8<span class="title">D</span> 69                                        !..<span class="title">i</span></span></span><br><span class="line"><span class="function">]</span></span><br><span class="line"><span class="function">]</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">证书[2]:</span></span><br><span class="line"><span class="function">所有者: <span class="title">CN</span>=<span class="title">CA</span>, <span class="title">OU</span>=<span class="title">CA</span>, <span class="title">O</span>=<span class="title">CA</span>, <span class="title">L</span>=<span class="title">CA</span>, <span class="title">ST</span>=<span class="title">CA</span></span></span><br><span class="line"><span class="function">发布者: <span class="title">CN</span>=<span class="title">CA</span>, <span class="title">OU</span>=<span class="title">CA</span>, <span class="title">O</span>=<span class="title">CA</span>, <span class="title">L</span>=<span class="title">CA</span>, <span class="title">ST</span>=<span class="title">CA</span></span></span><br><span class="line"><span class="function">序列号: 700<span class="title">d296d</span></span></span><br><span class="line"><span class="function">有效期开始日期: <span class="title">Tue</span> <span class="title">May</span> 08 17:18:36 <span class="title">CST</span> 2018, 截止日期: <span class="title">Fri</span> <span class="title">May</span> 05 17:18:36 <span class="title">CST</span> 2028</span></span><br><span class="line"><span class="function">证书指纹:</span></span><br><span class="line"><span class="function">         <span class="title">MD5</span>: 4<span class="title">B</span>:85:2<span class="title">D:A5</span>:97:<span class="title">C2:DA</span>:85:6<span class="title">C</span>:69:<span class="title">E7</span>:6<span class="title">D</span>:5<span class="title">A</span>:89:84:<span class="title">E1</span></span></span><br><span class="line"><span class="function">         <span class="title">SHA1</span>: <span class="title">D4</span>:41:64:<span class="title">F3:B6</span>:<span class="title">AE</span>:70:<span class="title">DC:DF</span>:84:<span class="title">B5</span>:40:51:5<span class="title">D</span>:59:<span class="title">D6:D2</span>:2<span class="title">A</span>:11:<span class="title">C1</span></span></span><br><span class="line"><span class="function">         <span class="title">SHA256</span>: <span class="title">CE</span>:5<span class="title">C</span>:79:<span class="title">FD</span>:90:<span class="title">F6:E7</span>:<span class="title">FC</span>:9<span class="title">C:F8</span>:06:08:2<span class="title">A</span>:9<span class="title">B:C3</span>:<span class="title">B0</span>:26:08:83:52:<span class="title">FA</span>:63:<span class="title">EF</span>:03:3<span class="title">B</span>:9<span class="title">E:A0</span>:26:3<span class="title">D</span>:61:6<span class="title">E:F6</span></span></span><br><span class="line"><span class="function">         签名算法名称: <span class="title">SHA256withRSA</span></span></span><br><span class="line"><span class="function">         版本: 3</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">扩展:</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">#1: <span class="title">ObjectId</span>: 2.5.29.14 <span class="title">Criticality</span>=<span class="title">false</span></span></span><br><span class="line"><span class="function"><span class="title">SubjectKeyIdentifier</span> [</span></span><br><span class="line"><span class="function"><span class="title">KeyIdentifier</span> [</span></span><br><span class="line"><span class="function">0000: 03 <span class="title">C7</span> 37 <span class="title">E8</span> <span class="title">C2</span> 2<span class="title">D</span> 9<span class="title">F</span> 68   1<span class="title">B</span> 3<span class="title">D</span> <span class="title">AD</span> <span class="title">E6</span> <span class="title">DF</span> <span class="title">C3</span> <span class="title">FC</span> <span class="title">E5</span>  ..7..-.<span class="title">h</span>.=......</span></span><br><span class="line"><span class="function">0010: 7<span class="title">C</span> 90 64 <span class="title">CB</span>                                        ..<span class="title">d</span>.</span></span><br><span class="line"><span class="function">]</span></span><br><span class="line"><span class="function">]</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">6.导出<span class="title">CA</span>根证书，方便浏览器安装</span></span><br><span class="line"><span class="function"><span class="title">E</span>:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">conf</span>&gt;<span class="title">keytool</span> -<span class="title">exportcert</span> -<span class="title">alias</span> <span class="title">rootca</span> -<span class="title">file</span> <span class="title">rootca.cer</span>   -<span class="title">storepass</span> <span class="title">changeit</span>  -<span class="title">keypass</span> <span class="title">changeit</span> -<span class="title">keystore</span> <span class="title">mykeystore</span></span></span><br><span class="line"><span class="function">存储在文件 &lt;<span class="title">rootca.cer</span>&gt; 中的证书</span></span><br><span class="line"><span class="function">现在将<span class="title">server.xml</span>中的证书改为<span class="title">mykeystore</span>，</span></span><br><span class="line"><span class="function">&lt;<span class="title">Connector</span> <span class="title">port</span>="8443" <span class="title">protocol</span>="<span class="title">org.apache.coyote.http11.Http11Protocol</span>"</span></span><br><span class="line"><span class="function">    <span class="title">maxThreads</span>="150" <span class="title">SSLEnabled</span>="<span class="title">true</span>" <span class="title">scheme</span>="<span class="title">https</span>" <span class="title">secure</span>="<span class="title">true</span>" </span></span><br><span class="line"><span class="function">    <span class="title">keystoreFile</span>="<span class="title">conf</span>/<span class="title">mykeystore</span>" <span class="title">keystorePass</span>="<span class="title">changeit</span>" <span class="title">keyAlias</span>="<span class="title">bingli</span>"</span></span><br><span class="line"><span class="function">    <span class="title">clientAuth</span>="<span class="title">false</span>" <span class="title">sslProtocol</span>="<span class="title">TLS</span>" /&gt;</span></span><br><span class="line"><span class="function">启动<span class="title">tomcat</span>，再用浏览器访问：</span></span><br><span class="line"><span class="function"><span class="title">https</span>://<span class="title">localhost</span>:8443/<span class="title">examples</span>/<span class="title">servlets</span>/<span class="title">servlet</span>/<span class="title">RequestParamExample</span></span></span><br><span class="line"><span class="function">发现上面2个问题依然存在，很简单，浏览器还没有导入<span class="title">CA</span>根证书，双击<span class="title">rootca.cer</span>安装证书，导入到受信任颁发机构一栏，然后再次访问，服务器证书不受信任问题解决！</span></span><br></pre></td></tr></table></figure>
+<h4 id="证书对应网址无效"><a href="#证书对应网址无效" class="headerlink" title="证书对应网址无效"></a>证书对应网址无效</h4><p>这个问题的原因前面已经说了，就是访问的地址和证书中的网址不相符，浏览器发出警告，解决方法是：</p>
+<figure class="highlight bat"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">在C:\Windows\System32\drivers\etc\hosts下配置映射</span><br><span class="line"><span class="number">192</span>.<span class="number">168</span>.<span class="number">1</span>.<span class="number">110</span> www.bingli.com</span><br></pre></td></tr></table></figure>
+<p>然后通过 <a href="https://www.bingli.com:8443/examples/servlets/servlet/RequestParamExample" target="_blank" rel="noopener">https://www.bingli.com:8443/examples/servlets/servlet/RequestParamExample</a> 访问，会发现地址栏左边不再显示红色的访问链接，而是绿色的标志，说明此网站已经被信任。最新版的google浏览器安全性增加了，可能仍然会有安全提示，但是使用360浏览器没有问题。效果图对比如下：</p>
+<p>未导入根证书前或者使用localhost访问：</p>
+<p><img src="/blog/2018/05/07/Tomcat安全—HTTPS/error.jpg" alt=""></p>
+<p>导入CA证书并使用证书中的网址访问：</p>
+<p><img src="/blog/2018/05/07/Tomcat安全—HTTPS/ok.jpg" alt=""></p>
+<h3 id="Tomcat配置https双向认证"><a href="#Tomcat配置https双向认证" class="headerlink" title="Tomcat配置https双向认证"></a>Tomcat配置https双向认证</h3><p>在单项认证中，是客户端去认证服务端证书的有效性，那么对于双向认证，就是在单项认证的基础上，服务端去校验客户端证书的有效性。如何在tomcat中开启双向认证？</p>
+<h4 id="客户端证书制作"><a href="#客户端证书制作" class="headerlink" title="客户端证书制作"></a>客户端证书制作</h4><p>首先需要制作一个客户端证书，由于目前客户端就是浏览器，因此证书类型必须是PKCS12，方便安装：</p>
+<figure class="highlight bat"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">E:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">conf</span>&gt;<span class="title">keytool</span> -<span class="title">genkeypair</span> -<span class="title">v</span> -<span class="title">alias</span> <span class="title">client</span> -<span class="title">keyalg</span> <span class="title">RSA</span>   -<span class="title">validity</span> 3650 -<span class="title">storetype</span> <span class="title">PKCS12</span> -<span class="title">keystore</span> <span class="title">client.p12</span> -<span class="title">dname</span> "<span class="title">CN</span>=<span class="title">client</span>,<span class="title">OU</span>=<span class="title">cn</span>,<span class="title">O</span>=<span class="title">cn</span>,<span class="title">L</span>=<span class="title">cn</span>,<span class="title">ST</span>=<span class="title">cn</span>" -<span class="title">storepass</span> <span class="title">changeit</span> -<span class="title">keypass</span> <span class="title">changeit</span></span></span><br><span class="line"><span class="function">正在为以下对象生成 2,048 位<span class="title">RSA</span>密钥对和自签名证书 (<span class="title">SHA256withRSA</span>) (有效期为 3,650 天):</span></span><br><span class="line"><span class="function">         <span class="title">CN</span>=<span class="title">client</span>, <span class="title">OU</span>=<span class="title">cn</span>, <span class="title">O</span>=<span class="title">cn</span>, <span class="title">L</span>=<span class="title">cn</span>, <span class="title">ST</span>=<span class="title">cn</span></span></span><br><span class="line"><span class="function">[正在存储<span class="title">client.p12</span>]</span></span><br><span class="line"><span class="function">密钥库<span class="title">client.p12</span>中就包含一个别名为<span class="title">client</span>的证书</span></span><br></pre></td></tr></table></figure>
+<h4 id="导出客户端证书并导入信任库"><a href="#导出客户端证书并导入信任库" class="headerlink" title="导出客户端证书并导入信任库"></a>导出客户端证书并导入信任库</h4><p>双向认证握手时，服务端要信任客户端证书，必须将客户端的证书加入服务端的信任库中：</p>
+<p>根据类的完成类名创建，eg：</p>
+<figure class="highlight bat"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">导出客户端证书</span><br><span class="line"><span class="function">E:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">conf</span>&gt;<span class="title">keytool</span> -<span class="title">exportcert</span> -<span class="title">keystore</span> <span class="title">client.p12</span> -<span class="title">storepass</span> <span class="title">changeit</span> -<span class="title">alias</span> <span class="title">client</span> -<span class="title">rfc</span> -<span class="title">file</span> <span class="title">client.cer</span>  -<span class="title">storetype</span> <span class="title">PKCS12</span></span></span><br><span class="line"><span class="function">存储在文件 &lt;<span class="title">client.cer</span>&gt; 中的证书</span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function">导入信任库</span></span><br><span class="line"><span class="function"><span class="title">E</span>:\<span class="title">project</span>\<span class="title">TOMCAT_7_0_83</span>\<span class="title">output</span>\<span class="title">build</span>\<span class="title">conf</span>&gt;<span class="title">keytool</span> --<span class="title">import</span> -<span class="title">noprompt</span> -<span class="title">v</span> -<span class="title">alias</span> <span class="title">client</span> -<span class="title">storepass</span> <span class="title">changeit</span> -<span class="title">file</span> <span class="title">client.cer</span> -<span class="title">keystore</span> <span class="title">cacerts.jks</span></span></span><br><span class="line"><span class="function">证书已添加到密钥库中</span></span><br><span class="line"><span class="function">[正在存储<span class="title">cacerts.jks</span>]</span></span><br></pre></td></tr></table></figure>
+<h4 id="配置server-xml"><a href="#配置server-xml" class="headerlink" title="配置server.xml"></a>配置server.xml</h4><p>修改server.xml如下：</p>
+<p>根据element的属性的值创建对象，当找不到属性，这使用默认的类名，eg:</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Connector</span> <span class="attr">port</span>=<span class="string">"8443"</span> <span class="attr">protocol</span>=<span class="string">"org.apache.coyote.http11.Http11Protocol"</span></span></span><br><span class="line"><span class="tag">           <span class="attr">maxThreads</span>=<span class="string">"150"</span> <span class="attr">SSLEnabled</span>=<span class="string">"true"</span> <span class="attr">scheme</span>=<span class="string">"https"</span> <span class="attr">secure</span>=<span class="string">"true"</span> </span></span><br><span class="line"><span class="tag">           <span class="attr">keystoreFile</span>=<span class="string">"conf/mykeystore"</span> <span class="attr">keystorePass</span>=<span class="string">"changeit"</span> <span class="attr">keyAlias</span>=<span class="string">"bingli"</span></span></span><br><span class="line"><span class="tag">           <span class="attr">truststoreFile</span>=<span class="string">"conf/cacerts.jks"</span> <span class="attr">truststorePass</span>=<span class="string">"changeit"</span> </span></span><br><span class="line"><span class="tag">           <span class="attr">clientAuth</span>=<span class="string">"true"</span> <span class="attr">sslProtocol</span>=<span class="string">"TLS"</span> /&gt;</span></span><br></pre></td></tr></table></figure>
+<p>启动tomcat，然后继续访问<a href="https://www.bingli.com:8443/examples/servlets/servlet/RequestParamExample" target="_blank" rel="noopener">https://www.bingli.com:8443/examples/servlets/servlet/RequestParamExample</a></p>
+<p>发现会提示没有提供登陆证书，访问失败。将刚才制作的client.p12证书安装好，然后继续访问，此时会弹出一个选择客户端证书的窗口，点击确定，会访问成功。因此如果客户端没有安装证书，也无法访问tomcat提供的服务，安全性大大增加。证书选择示例：</p>
+<p><img src="/blog/2018/05/07/Tomcat安全—HTTPS/client.jpg" alt=""></p>
+<p>除了通过jdk的keytool制作证书外，通过openssl也可以制作证书，可自行网上查阅，也可以参考这篇文章<a href="https://blog.csdn.net/zhulianhai0927/article/details/52233355" target="_blank" rel="noopener">httpd设置HTTPS双向认证 </a>，流程和keytool先差不多。</p>
+<h3 id="HTTP-2-0"><a href="#HTTP-2-0" class="headerlink" title="HTTP/2.0"></a>HTTP/2.0</h3><p>之前已经tomcat如何配置https，下面介绍下tomcat如何支持http2，因为http2是在https基础之上实现的。由于目前jdk8及以下版本JSSE还没有支持ALPN协议，因此配置环境在jdk10下进行，如果实在想用jdk8或者以下版本，则可以选择openssl的方式配置https，此处不再描述。这里使用上面创建的自签名证书server.keystore</p>
+<h4 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h4><p>tomcat的server.xml中配置：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Connector</span> <span class="attr">port</span>=<span class="string">"8443"</span> <span class="attr">protocol</span>=<span class="string">"org.apache.coyote.http11.Http11NioProtocol"</span> 		<span class="attr">scheme</span>=<span class="string">"https"</span> <span class="attr">secure</span>=<span class="string">"true"</span> <span class="attr">keystoreFile</span>=<span class="string">"conf/security/keystore.jks"</span> <span class="attr">keystorePass</span>=<span class="string">"changeit"</span>  <span class="attr">maxThreads</span>=<span class="string">"150"</span> <span class="attr">SSLEnabled</span>=<span class="string">"true"</span> &gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="name">UpgradeProtocol</span> <span class="attr">className</span>=<span class="string">"org.apache.coyote.http2.Http2Protocol"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">Connector</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>启动tomcat后，通过<a href="https://localhost:8443/访问，查看访问日志如下即可：" target="_blank" rel="noopener">https://localhost:8443/访问，查看访问日志如下即可：</a></p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET / HTTP/2.0" 200 11230</span><br><span class="line">0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /tomcat.png HTTP/2.0" 200 5103</span><br><span class="line">0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /tomcat.css HTTP/2.0" 200 5581</span><br><span class="line">0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /bg-middle.png HTTP/2.0" 200 1918</span><br><span class="line">0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /bg-nav.png HTTP/2.0" 200 1401</span><br><span class="line">0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /bg-upper.png HTTP/2.0" 200 3103</span><br><span class="line">0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /bg-button.png HTTP/2.0" 200 713</span><br><span class="line">0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:37 +0800] "GET /asf-logo-wide.svg HTTP/2.0" 200 27235</span><br><span class="line">0:0:0:0:0:0:0:1 - - [28/Aug/2018:08:12:38 +0800] "GET /favicon.ico HTTP/2.0" 200 21630</span><br></pre></td></tr></table></figure>
+<p>关于https的其他配置可以参考tomcat的文档，下一篇会继续讲https，通过wireshark工具分析https的握手过程以及异常情况。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    Bing Li
+  </li>
+  <li class="post-copyright-created">
+    <strong>发表时间：</strong>
+ 2018-05-07 21:11:56
+  </li>
+  <li class="post-copyright-update">
+    <strong>最后更新：</strong>
+ 2018-05-07 21:11:56
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://bingli-borland.github.io/blog/2018/05/07/Tomcat安全—HTTPS/" title="Tomcat安全—HTTPS">https://bingli-borland.github.io/blog/2018/05/07/Tomcat安全—HTTPS/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/blog/tags/java/" rel="tag"># java</a>
+          
+            <a href="/blog/tags/tomcat/" rel="tag"># tomcat</a>
+          
+            <a href="/blog/tags/https/" rel="tag"># https</a>
+          
+            <a href="/blog/tags/keytool/" rel="tag"># keytool</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/blog/2018/04/24/Tomcat源码分析—配置解析Digester/" rel="next" title="Tomcat源码分析—配置解析Digester">
+                <i class="fa fa-chevron-left"></i> Tomcat源码分析—配置解析Digester
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/blog/2018/05/13/Tomcat安全—分析HTTPS/" rel="prev" title="Tomcat安全—分析HTTPS">
+                Tomcat安全—分析HTTPS <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      
+        <div id="gitment-container"></div>
+      
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Bing Li</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/blog/archives/">
+              
+                  <span class="site-state-item-count">24</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/blog/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/blog/tags/index.html">
+                  <span class="site-state-item-count">46</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/blog/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          <div class="links-of-author motion-element">
+            
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/bingli-borland" target="_blank" title="GitHub">
+                    
+                      <i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="mailto:1042996632@qq.com" target="_blank" title="E-Mail">
+                    
+                      <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            
+          </div>
+    
+    <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-globe"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                  <li class="links-of-blogroll-item">
+                    <a href="http://jm.taobao.org/" title="阿里中间件博客" target="_blank">阿里中间件博客</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="http://blog.51cto.com/guojuanjun" title="天下无贼" target="_blank">天下无贼</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="https://segmentfault.com/u/wuyangchun" title="Linux����" target="_blank">wuyangchun(Linux)</a>
+                  </li>
+              </ul>
+            </div>
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#基本概念"><span class="nav-number">2.</span> <span class="nav-text">基本概念</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#协议"><span class="nav-number">2.1.</span> <span class="nav-text">协议</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#加密算法"><span class="nav-number">2.2.</span> <span class="nav-text">加密算法</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#对称加密"><span class="nav-number">2.2.1.</span> <span class="nav-text">对称加密</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#非对称加密"><span class="nav-number">2.2.2.</span> <span class="nav-text">非对称加密</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#摘要算法（哈希算法）"><span class="nav-number">2.3.</span> <span class="nav-text">摘要算法（哈希算法）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#数字签名"><span class="nav-number">2.4.</span> <span class="nav-text">数字签名</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#例子"><span class="nav-number">3.</span> <span class="nav-text">例子</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#自签名证书制作"><span class="nav-number">4.</span> <span class="nav-text">自签名证书制作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Tomcat配置https单向认证"><span class="nav-number">5.</span> <span class="nav-text">Tomcat配置https单向认证</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#自签名证书不被信任"><span class="nav-number">5.1.</span> <span class="nav-text">自签名证书不被信任</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#证书对应网址无效"><span class="nav-number">5.2.</span> <span class="nav-text">证书对应网址无效</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Tomcat配置https双向认证"><span class="nav-number">6.</span> <span class="nav-text">Tomcat配置https双向认证</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#客户端证书制作"><span class="nav-number">6.1.</span> <span class="nav-text">客户端证书制作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#导出客户端证书并导入信任库"><span class="nav-number">6.2.</span> <span class="nav-text">导出客户端证书并导入信任库</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#配置server-xml"><span class="nav-number">6.3.</span> <span class="nav-text">配置server.xml</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HTTP-2-0"><span class="nav-number">7.</span> <span class="nav-text">HTTP/2.0</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#配置"><span class="nav-number">7.1.</span> <span class="nav-text">配置</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2017 &mdash; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Bing Li</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a></div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/utils.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/motion.js?v=5.1.3"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/affix.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/schemes/pisces.js?v=5.1.3"></script>
+
+
+
+  
+  <script type="text/javascript" src="/blog/js/src/scrollspy.js?v=5.1.3"></script>
+<script type="text/javascript" src="/blog/js/src/post-details.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/bootstrap.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+<!-- LOCAL: You can save these files to your site and update links -->
+    
+        
+        <link rel="stylesheet" href="https://aimingoo.github.io/gitmint/style/default.css">
+        <script src="https://aimingoo.github.io/gitmint/dist/gitmint.browser.js"></script>
+    
+<!-- END LOCAL -->
+
+    
+
+    
+      <script type="text/javascript">
+      function renderGitment(){
+        var gitment = new Gitmint({
+            id: window.location.pathname, 
+            owner: 'bingli-borland',
+            repo: 'blog',
+            
+            lang: "" || navigator.language || navigator.systemLanguage || navigator.userLanguage,
+            
+            oauth: {
+            
+            
+                client_secret: '15d5986f446770cf9d00de45fe9cad58e0e890f3',
+            
+                client_id: '2827532caba6f447f0b0'
+            }});
+        gitment.render('gitment-container');
+      }
+
+      
+      renderGitment();
+      
+      </script>
+    
+
+
+
+
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/blog/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("UDWbbilpB75dbOg2gXfE9jqT-gzGzoHsz", "tdIIS5nlhxM9psPaMOOqtKLe");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

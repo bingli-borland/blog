@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/blog/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/blog/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/blog/css/main.css?v=5.1.3" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/blog/images/apple-touch-icon-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/blog/images/favicon-32x32-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/blog/images/favicon-16x16-next.png?v=5.1.3">
+
+
+  <link rel="mask-icon" href="/blog/images/logo.svg?v=5.1.3" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="java,tomcat,eclipse,server,">
+
+
+
+
+
+  <link rel="alternate" href="/blog/atom.xml" title="技术与生活" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="本人从事J2EE应用服务器的研发工作，从本文开始分析下开源的web容器项目tomcat，首先讲下环境搭建，方便调试源码和分析tomcat原理。 tomcat源码下载Tomcat源码位置，这里我们选择8.5.23版本，通过svn工具检出之后的目录如下： 编译我们可以看到build.xml，官方编译tomcat使用ant编译，这里我使用ant-1.9.7来编译，直接在源码目录输入ant命令。1F:\p">
+<meta name="keywords" content="java,tomcat,eclipse,server">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tomcat源码分析—eclipse环境搭建">
+<meta property="og:url" content="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/index.html">
+<meta property="og:site_name" content="技术与生活">
+<meta property="og:description" content="本人从事J2EE应用服务器的研发工作，从本文开始分析下开源的web容器项目tomcat，首先讲下环境搭建，方便调试源码和分析tomcat原理。 tomcat源码下载Tomcat源码位置，这里我们选择8.5.23版本，通过svn工具检出之后的目录如下： 编译我们可以看到build.xml，官方编译tomcat使用ant编译，这里我使用ant-1.9.7来编译，直接在源码目录输入ant命令。1F:\p">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/tomcat源码目录.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/依赖.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/下载依赖异常1.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/下载依赖异常2.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/tomcat.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/eclipse-tomcat-project.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/debug.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/debug1.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/debug2.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/debug3.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/debug4.jpg">
+<meta property="og:updated_time" content="2017-11-19T07:05:56.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tomcat源码分析—eclipse环境搭建">
+<meta name="twitter:description" content="本人从事J2EE应用服务器的研发工作，从本文开始分析下开源的web容器项目tomcat，首先讲下环境搭建，方便调试源码和分析tomcat原理。 tomcat源码下载Tomcat源码位置，这里我们选择8.5.23版本，通过svn工具检出之后的目录如下： 编译我们可以看到build.xml，官方编译tomcat使用ant编译，这里我使用ant-1.9.7来编译，直接在源码目录输入ant命令。1F:\p">
+<meta name="twitter:image" content="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/tomcat源码目录.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/blog/',
+    scheme: 'Gemini',
+    version: '5.1.3',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/">
+
+
+
+
+
+  <title>Tomcat源码分析—eclipse环境搭建 | 技术与生活</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/blog/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术与生活</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/blog/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/blog/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/blog/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/blog/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/blog/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://bingli-borland.github.io/blog/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Bing Li">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/blog/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术与生活">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Tomcat源码分析—eclipse环境搭建</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-11-19T15:05:56+08:00">
+                2017-11-19
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/blog/categories/tomcat/" itemprop="url" rel="index">
+                    <span itemprop="name">tomcat</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count gitment-comments-count" data-xid="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/" class="leancloud_visitors" data-flag-title="Tomcat源码分析—eclipse环境搭建">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>本人从事J2EE应用服务器的研发工作，从本文开始分析下开源的web容器项目tomcat，首先讲下环境搭建，方便调试源码和分析tomcat原理。</p>
+<h3 id="tomcat源码下载"><a href="#tomcat源码下载" class="headerlink" title="tomcat源码下载"></a>tomcat源码下载</h3><p><a href="http://svn.apache.org/repos/asf/tomcat/tc8.5.x/tags/TOMCAT_8_5_23" target="_blank" rel="noopener">Tomcat源码位置</a>，这里我们选择8.5.23版本，通过svn工具检出之后的目录如下：<br><img src="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/tomcat源码目录.jpg" alt=""></p>
+<h3 id="编译"><a href="#编译" class="headerlink" title="编译"></a>编译</h3><p>我们可以看到build.xml，官方编译tomcat使用ant编译，这里我使用ant-1.9.7来编译，直接在源码目录输入ant命令。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">F:\project\TOMCAT_8_5_23&gt;ant</span><br></pre></td></tr></table></figure></p>
+<p>编译过程中会下载编译需要的依赖到本地，具体位置可以查看build.properties.default中base.path属性，base.path=${user.home}/tomcat-build-libs，完成之后目录如下：<br><img src="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/依赖.jpg" alt=""></p>
+<a id="more"></a>
+<p>注意：在下载checkstyle时遇到一个问题：<br><img src="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/下载依赖异常1.jpg" alt=""><br>有人已经遇到过这个问题，<a href="https://www.cnblogs.com/liaojie970/p/4919485.html" target="_blank" rel="noopener">https://www.cnblogs.com/liaojie970/p/4919485.html</a><br>但是要注意直接替换jdk下的cacerts文件，但是还是有如下问题：<br><img src="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/下载依赖异常2.jpg" alt=""></p>
+<p>查看我的jdk版本为jdk1.7._80，换为jdk1.8之后问题解决。下载完成后，不用再次下载，可换回jdk7或者jdk6继续编译。<br>编译好之后再查看源码目录下output/build，即为编译好的tomcat<br><img src="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/tomcat.jpg" alt=""></p>
+<p>各个目录作用如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">bin——存放各种不同平台开启与关闭Tomcat的脚本文件</span><br><span class="line"></span><br><span class="line">lib——存tomcat与web应用的Jar包</span><br><span class="line"></span><br><span class="line">conf——存放tomcat的配置文件：</span><br><span class="line">server.xml-tomcat主要配置文件，即存放server、service、connector、engine、host等结构以及属性的文件</span><br><span class="line">web.xml-默认的web应用配置文件，部署应用时将会和应用自身的web.xml合并</span><br><span class="line">context.xml-默认给应用配置一些非标准信息的配置文件，起到私有描述符的作用，类似于glassfish的glass fish-web.xml</span><br><span class="line">tomcat-users.xml-文件安全域（UserDatabaseRealm）配置用户和密码的文件</span><br><span class="line">logging.properties-tomcat日志配置文件，日志级别和handler</span><br><span class="line">catalina.properties-tomcat默认的一些系统属性配置，common.loader、shared.loader、server.loader</span><br><span class="line">catalina.policy-Java Security Manager 实现的安全策略声明，只有当Tomcat用-security命令行参数启动时这个文件才会被使用</span><br><span class="line"></span><br><span class="line">webapps——web应用的发布目录，tomcat启动时，加载webapps文件夹下的项目</span><br><span class="line"></span><br><span class="line">work——tomcat把由各种jsp生成的servlet文件存放的地方</span><br><span class="line"></span><br><span class="line">logs——tomcat存放日志文件的地方</span><br><span class="line"></span><br><span class="line">temp——tomcat存放临时文件的地方</span><br></pre></td></tr></table></figure>
+<h3 id="导入eclipse"><a href="#导入eclipse" class="headerlink" title="导入eclipse"></a>导入eclipse</h3><p>现在将tomcat源码导入eclipse，有种方案：<br>1、在源码目录上执行转换工程的命令</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># 转为eclipse工程</span><br><span class="line">ant ide-eclipse</span><br><span class="line"></span><br><span class="line"># 转为netbeans工程</span><br><span class="line">ant ide-netbeans</span><br></pre></td></tr></table></figure>
+<p>2、新建一个java工程，将源码中的所有那文件拷贝过去，同时将下载的依赖添加到buildpath中，此方案具体步骤可百度解决，此处不再详细描述。<br>3、新添加一个pom文件改为maven工程，即可导入eclipse。<br>pom.xml文件内容</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span><br><span class="line">&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot; xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span><br><span class="line">         xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd&quot;&gt;</span><br><span class="line"></span><br><span class="line">  &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;</span><br><span class="line">  &lt;artifactId&gt;tomcat&lt;/artifactId&gt;</span><br><span class="line">  &lt;groupId&gt;org.apache.tomcat&lt;/groupId&gt;</span><br><span class="line">  &lt;version&gt;8.5.23&lt;/version&gt;</span><br><span class="line">  &lt;packaging&gt;jar&lt;/packaging&gt;</span><br><span class="line">  &lt;name&gt;Tomcat&lt;/name&gt;</span><br><span class="line">  &lt;properties&gt;</span><br><span class="line">    &lt;project.build.sourceEncoding&gt;UTF-8&lt;/project.build.sourceEncoding&gt;</span><br><span class="line">    &lt;tomcat.groupId&gt;org.apache.tomcat&lt;/tomcat.groupId&gt;</span><br><span class="line">    &lt;tomcat.zip.name&gt;tomcat&lt;/tomcat.zip.name&gt;</span><br><span class="line">  &lt;/properties&gt;</span><br><span class="line">  </span><br><span class="line">  &lt;build&gt;</span><br><span class="line">  	&lt;sourceDirectory&gt;java&lt;/sourceDirectory&gt;</span><br><span class="line">  	&lt;testSourceDirectory&gt;test&lt;/testSourceDirectory&gt;</span><br><span class="line">  &lt;/build&gt;</span><br><span class="line">  &lt;dependencies&gt;</span><br><span class="line">      &lt;dependency&gt;</span><br><span class="line">          &lt;groupId&gt;tomcat-native&lt;/groupId&gt;</span><br><span class="line">          &lt;artifactId&gt;tomcat-native&lt;/artifactId&gt;</span><br><span class="line">          &lt;version&gt;1.2.14&lt;/version&gt;</span><br><span class="line">          &lt;type&gt;tar.gz&lt;/type&gt;</span><br><span class="line">      &lt;/dependency&gt;</span><br><span class="line">      &lt;dependency&gt;</span><br><span class="line">          &lt;groupId&gt;commons-daemon&lt;/groupId&gt;</span><br><span class="line">          &lt;artifactId&gt;commons-daemon&lt;/artifactId&gt;</span><br><span class="line">          &lt;version&gt;1.0.15&lt;/version&gt;</span><br><span class="line">          &lt;type&gt;jar&lt;/type&gt;</span><br><span class="line">      &lt;/dependency&gt;</span><br><span class="line">      &lt;dependency&gt;</span><br><span class="line">          &lt;groupId&gt;commons-daemon&lt;/groupId&gt;</span><br><span class="line">          &lt;artifactId&gt;commons-daemon&lt;/artifactId&gt;</span><br><span class="line">          &lt;version&gt;1.0.15&lt;/version&gt;</span><br><span class="line">          &lt;type&gt;tar.gz&lt;/type&gt;</span><br><span class="line">          &lt;classifier&gt;native-src&lt;/classifier&gt;</span><br><span class="line">      &lt;/dependency&gt;</span><br><span class="line">      &lt;dependency&gt;</span><br><span class="line">          &lt;groupId&gt;ecj&lt;/groupId&gt;</span><br><span class="line">          &lt;artifactId&gt;ecj&lt;/artifactId&gt;</span><br><span class="line">          &lt;version&gt;4.6.3&lt;/version&gt;</span><br><span class="line">          &lt;type&gt;jar&lt;/type&gt;</span><br><span class="line">      &lt;/dependency&gt;</span><br><span class="line">  &lt;/dependencies&gt;</span><br><span class="line">  </span><br><span class="line">&lt;/project&gt;</span><br></pre></td></tr></table></figure>
+<p>用第3种方式导入eclipse成功后如下：<br><img src="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/eclipse-tomcat-project.jpg" alt=""></p>
+<h3 id="debug模式启动tomcat"><a href="#debug模式启动tomcat" class="headerlink" title="debug模式启动tomcat"></a>debug模式启动tomcat</h3><p>调试tomcat可以本地调试，也可以远程调试。</p>
+<h4 id="本地调试"><a href="#本地调试" class="headerlink" title="本地调试"></a>本地调试</h4><p>本地调试可在eclipse中打开Bootstrap.java类，打上断点之后，右键debug as-&gt;Java Application</p>
+<h4 id="远程调试"><a href="#远程调试" class="headerlink" title="远程调试"></a>远程调试</h4><p>远程调试只需要在启动tomcat时开启jpda服务即可。<br>什么是JPDA呢？<br>JPDA(Java Platform Debugger Architecture) 是 Java 平台调试体系结构的缩写，通过 JPDA 提供的 API，开发人员可以方便灵活的搭建 Java 调试应用程序。JPDA 主要由三个部分组成：Java 虚拟机工具接口（JVMTI），Java 调试线协议（JDWP），以及 Java 调试接口（JDI）。而像Eclipse和IDEA这种开发工具提供的图形界面的调试工具，其实就是实现了JDI。关于JPDA的详细信息，可以google一些文章查看。<br>tomcat使用如下方式进行启动jpda：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">F:\project\TOMCAT_8_5_23\output\build\bin&gt; catalina.bat jpda start</span><br></pre></td></tr></table></figure></p>
+<p><img src="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/debug.jpg" alt=""><br>默认远程调试的默认端口为8000，可以通过JPDA_ADDRESS进行配置，指定自定义的端口，另外，还有两个可以配置的参数<br>    JPDA_TRANSPORT：即调试器和虚拟机之间数据的传输方式，默认值是dt_socket<br>    JPDA_SUSPEND：即JVM启动后是否立即挂起，默认是n<br>可以在catalina.bat中进行配置：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">JPDA_TRANSPORT=dt_socket  </span><br><span class="line">JPDA_ADDRESS=5005  </span><br><span class="line">JPAD_SUSPEND=n</span><br></pre></td></tr></table></figure></p>
+<p>增加远程调试参数的方式有很多，这里就不一一描述了。</p>
+<h3 id="使用eclipse远程调试tomcat"><a href="#使用eclipse远程调试tomcat" class="headerlink" title="使用eclipse远程调试tomcat"></a>使用eclipse远程调试tomcat</h3><p>以debug模式启动tomcat后，在eclipse中Debug Configuration-&gt;新建Remote Java Application，注意调试Host和Port分别为localhost和8000：<br><img src="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/debug1.jpg" alt=""><br>然后在source栏中将Tomcat项目添加进来：<br><img src="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/debug2.jpg" alt=""><br>最后点击debug按钮即可远程调试：<br><img src="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/debug3.jpg" alt=""><br><img src="/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/debug4.jpg" alt=""></p>
+<h3 id="补充"><a href="#补充" class="headerlink" title="补充"></a>补充</h3><p>由于目前使用的8.5.23版本的tomcat去掉了BIO，而7.0.83版是带有BIO的连接器的，因此以后分析采用7.0.83版本，环境搭建过程和上面的类似。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    Bing Li
+  </li>
+  <li class="post-copyright-created">
+    <strong>发表时间：</strong>
+ 2017-11-19 15:05:56
+  </li>
+  <li class="post-copyright-update">
+    <strong>最后更新：</strong>
+ 2017-11-19 15:05:56
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/" title="Tomcat源码分析—eclipse环境搭建">https://bingli-borland.github.io/blog/2017/11/19/Tomcat源码分析—eclipse环境搭建/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/blog/tags/java/" rel="tag"># java</a>
+          
+            <a href="/blog/tags/tomcat/" rel="tag"># tomcat</a>
+          
+            <a href="/blog/tags/eclipse/" rel="tag"># eclipse</a>
+          
+            <a href="/blog/tags/server/" rel="tag"># server</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/blog/2017/11/04/Github结合Hexo的个人博客构建过程/" rel="next" title="Github结合Hexo的个人博客构建过程">
+                <i class="fa fa-chevron-left"></i> Github结合Hexo的个人博客构建过程
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/blog/2017/11/25/大数据学习—hadoop安装配置/" rel="prev" title="大数据学习—hadoop安装配置">
+                大数据学习—hadoop安装配置 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      
+        <div id="gitment-container"></div>
+      
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Bing Li</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/blog/archives/">
+              
+                  <span class="site-state-item-count">24</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/blog/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/blog/tags/index.html">
+                  <span class="site-state-item-count">46</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/blog/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          <div class="links-of-author motion-element">
+            
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/bingli-borland" target="_blank" title="GitHub">
+                    
+                      <i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="mailto:1042996632@qq.com" target="_blank" title="E-Mail">
+                    
+                      <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            
+          </div>
+    
+    <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-globe"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                  <li class="links-of-blogroll-item">
+                    <a href="http://jm.taobao.org/" title="阿里中间件博客" target="_blank">阿里中间件博客</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="http://blog.51cto.com/guojuanjun" title="天下无贼" target="_blank">天下无贼</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="https://segmentfault.com/u/wuyangchun" title="Linux����" target="_blank">wuyangchun(Linux)</a>
+                  </li>
+              </ul>
+            </div>
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#tomcat源码下载"><span class="nav-number">1.</span> <span class="nav-text">tomcat源码下载</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#编译"><span class="nav-number">2.</span> <span class="nav-text">编译</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#导入eclipse"><span class="nav-number">3.</span> <span class="nav-text">导入eclipse</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#debug模式启动tomcat"><span class="nav-number">4.</span> <span class="nav-text">debug模式启动tomcat</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#本地调试"><span class="nav-number">4.1.</span> <span class="nav-text">本地调试</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#远程调试"><span class="nav-number">4.2.</span> <span class="nav-text">远程调试</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用eclipse远程调试tomcat"><span class="nav-number">5.</span> <span class="nav-text">使用eclipse远程调试tomcat</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#补充"><span class="nav-number">6.</span> <span class="nav-text">补充</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2017 &mdash; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Bing Li</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a></div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/utils.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/motion.js?v=5.1.3"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/affix.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/schemes/pisces.js?v=5.1.3"></script>
+
+
+
+  
+  <script type="text/javascript" src="/blog/js/src/scrollspy.js?v=5.1.3"></script>
+<script type="text/javascript" src="/blog/js/src/post-details.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/bootstrap.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+<!-- LOCAL: You can save these files to your site and update links -->
+    
+        
+        <link rel="stylesheet" href="https://aimingoo.github.io/gitmint/style/default.css">
+        <script src="https://aimingoo.github.io/gitmint/dist/gitmint.browser.js"></script>
+    
+<!-- END LOCAL -->
+
+    
+
+    
+      <script type="text/javascript">
+      function renderGitment(){
+        var gitment = new Gitmint({
+            id: window.location.pathname, 
+            owner: 'bingli-borland',
+            repo: 'blog',
+            
+            lang: "" || navigator.language || navigator.systemLanguage || navigator.userLanguage,
+            
+            oauth: {
+            
+            
+                client_secret: '15d5986f446770cf9d00de45fe9cad58e0e890f3',
+            
+                client_id: '2827532caba6f447f0b0'
+            }});
+        gitment.render('gitment-container');
+      }
+
+      
+      renderGitment();
+      
+      </script>
+    
+
+
+
+
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/blog/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("UDWbbilpB75dbOg2gXfE9jqT-gzGzoHsz", "tdIIS5nlhxM9psPaMOOqtKLe");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

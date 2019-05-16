@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/blog/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/blog/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/blog/css/main.css?v=5.1.3" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/blog/images/apple-touch-icon-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/blog/images/favicon-32x32-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/blog/images/favicon-16x16-next.png?v=5.1.3">
+
+
+  <link rel="mask-icon" href="/blog/images/logo.svg?v=5.1.3" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="java,tomcat,deploy,">
+
+
+
+
+
+  <link rel="alternate" href="/blog/atom.xml" title="技术与生活" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="前言前面已经分析过了tomcat的启动和配置解析，但是作为一款应用服务器，最重要的是能部署应用，接下来探究tomcat如何完成应用部署以及资源加载的？ 源码server.xml中配置Context元素配置如下： 1234567&amp;lt;Host name=&quot;localhost&quot;  appBase=&quot;webapps&quot;            unpackWARs=&quot;true&quot; autoDeploy=&quot;t">
+<meta name="keywords" content="java,tomcat,deploy">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tomcat源码分析—应用部署分析(一)">
+<meta property="og:url" content="https://bingli-borland.github.io/blog/2018/07/04/Tomcat源码分析—应用部署分析(一)/index.html">
+<meta property="og:site_name" content="技术与生活">
+<meta property="og:description" content="前言前面已经分析过了tomcat的启动和配置解析，但是作为一款应用服务器，最重要的是能部署应用，接下来探究tomcat如何完成应用部署以及资源加载的？ 源码server.xml中配置Context元素配置如下： 1234567&amp;lt;Host name=&quot;localhost&quot;  appBase=&quot;webapps&quot;            unpackWARs=&quot;true&quot; autoDeploy=&quot;t">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/07/04/Tomcat源码分析—应用部署分析(一)/path.jpg">
+<meta property="og:updated_time" content="2018-07-04T07:11:03.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tomcat源码分析—应用部署分析(一)">
+<meta name="twitter:description" content="前言前面已经分析过了tomcat的启动和配置解析，但是作为一款应用服务器，最重要的是能部署应用，接下来探究tomcat如何完成应用部署以及资源加载的？ 源码server.xml中配置Context元素配置如下： 1234567&amp;lt;Host name=&quot;localhost&quot;  appBase=&quot;webapps&quot;            unpackWARs=&quot;true&quot; autoDeploy=&quot;t">
+<meta name="twitter:image" content="https://bingli-borland.github.io/blog/2018/07/04/Tomcat源码分析—应用部署分析(一)/path.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/blog/',
+    scheme: 'Gemini',
+    version: '5.1.3',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://bingli-borland.github.io/blog/2018/07/04/Tomcat源码分析—应用部署分析(一)/">
+
+
+
+
+
+  <title>Tomcat源码分析—应用部署分析(一) | 技术与生活</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/blog/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术与生活</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/blog/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/blog/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/blog/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/blog/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/blog/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://bingli-borland.github.io/blog/blog/2018/07/04/Tomcat源码分析—应用部署分析(一)/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Bing Li">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/blog/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术与生活">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Tomcat源码分析—应用部署分析(一)</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-07-04T15:11:03+08:00">
+                2018-07-04
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/blog/categories/tomcat/" itemprop="url" rel="index">
+                    <span itemprop="name">tomcat</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/blog/2018/07/04/Tomcat源码分析—应用部署分析(一)/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count gitment-comments-count" data-xid="/blog/2018/07/04/Tomcat源码分析—应用部署分析(一)/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/blog/2018/07/04/Tomcat源码分析—应用部署分析(一)/" class="leancloud_visitors" data-flag-title="Tomcat源码分析—应用部署分析(一)">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>前面已经分析过了tomcat的启动和配置解析，但是作为一款应用服务器，最重要的是能部署应用，接下来探究tomcat如何完成应用部署以及资源加载的？</p>
+<h3 id="源码"><a href="#源码" class="headerlink" title="源码"></a>源码</h3><h4 id="server-xml中配置Context元素"><a href="#server-xml中配置Context元素" class="headerlink" title="server.xml中配置Context元素"></a>server.xml中配置Context元素</h4><p>配置如下：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Host</span> <span class="attr">name</span>=<span class="string">"localhost"</span>  <span class="attr">appBase</span>=<span class="string">"webapps"</span></span></span><br><span class="line"><span class="tag">            <span class="attr">unpackWARs</span>=<span class="string">"true"</span> <span class="attr">autoDeploy</span>=<span class="string">"true"</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">Context</span> <span class="attr">docBase</span>=<span class="string">"E:\project\tomcat\webapps1\manager"</span> <span class="attr">path</span>=<span class="string">"test222"</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">Valve</span> <span class="attr">className</span>=<span class="string">"org.apache.catalina.valves.AccessLogValve"</span> <span class="attr">directory</span>=<span class="string">"logs"</span></span></span><br><span class="line"><span class="tag">               <span class="attr">prefix</span>=<span class="string">"localhost_access_log"</span> <span class="attr">suffix</span>=<span class="string">".txt"</span></span></span><br><span class="line"><span class="tag">               <span class="attr">pattern</span>=<span class="string">"%h %l %u %t &amp;quot;%r&amp;quot; %s %b"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">Host</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<a id="more"></a>
+<p>Context可以配置的属性集合：</p>
+<blockquote>
+<p>path：是访问时的根地址，比如上面的应用访问路径为<code>http://localhost:8080/test222</code>，如果指定空字符串（“”）的上下文路径，则表示您正在为此主机定义默认Web应用程序，该应用程序将处理未分配给其他上下文的所有请求。  只有在server.xml中静态定义Context时，才能使用此属性。 在所有其他情况下，将从用于.xml上下文文件或docBase的文件名推断出该路径。  即使在server.xml中静态定义Context，也不能设置此属性，除非docBase不在Host的appBase下，或者deployOnStartup和autoDeploy都为false</p>
+<p>reloadable：表示WebappLoader可以在运行时在backgroundProcess方法中判断classes与lib文件夹放生改变时是否重加载</p>
+<p>docBase：表示应用程序的路径。docBase可以使用绝对路径，也可以使用相对路径，相对路径相对于webapps</p>
+<p>workDir：应用的工作目录，存放运行时生成的文件</p>
+<p>debug：设定debug level, 0表示提供最少的信息，9表示提供最多的信息。</p>
+<p>privileged：设置为true的时候，web应用使用容器内的Servlet。</p>
+</blockquote>
+<p>由于digester解析规则配置Host元素下解析Context元素，tomcat启动时，会将Context构建成StandardContext对象通过addChild添加给Host，并且启动了Context，在此过程中解析web.xml等，应用成功部署，且默认没有任何日志输出。</p>
+<h4 id="自定义部署文件"><a href="#自定义部署文件" class="headerlink" title="自定义部署文件"></a>自定义部署文件</h4><p>此文件一般放在${catalina.base}/conf/engine name/host name目录下，例如conf\Catalina\localhost\ROOT.xml内容如下：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Context</span> <span class="attr">docBase</span>=<span class="string">'E:\project\tomcat\webapps1\manager'</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>此方式和上面的方式差不多，且不需要配置path，配置了也不起作用 （根据上面对path的解释），但是此种方式涉及到一个重要的类HostConfig，继承自LifecyceListener，这个类同样是digester解析规则配置Host元素时，通过LifecycleListenerRule添加给Host的一个监听器。context.xml中path不生效原因如下：</p>
+<p><img src="/blog/2018/07/04/Tomcat源码分析—应用部署分析(一)/path.jpg" alt=""></p>
+<h4 id="HostConfig"><a href="#HostConfig" class="headerlink" title="HostConfig"></a>HostConfig</h4><p>HostConfig随着Host的启动触发其lifecycleEvent方法。如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lifecycleEvent</span><span class="params">(LifecycleEvent event)</span> </span>&#123;</span><br><span class="line">	<span class="comment">// Identify the host we are associated with</span></span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">	    host = (Host) event.getLifecycle();</span><br><span class="line">	    <span class="keyword">if</span> (host <span class="keyword">instanceof</span> StandardHost) &#123;</span><br><span class="line">	        setCopyXML(((StandardHost) host).isCopyXML());</span><br><span class="line">	        setDeployXML(((StandardHost) host).isDeployXML());</span><br><span class="line">	        setUnpackWARs(((StandardHost) host).isUnpackWARs());</span><br><span class="line">	        setContextClass(((StandardHost) host).getContextClass());</span><br><span class="line">	    &#125;</span><br><span class="line">	&#125; <span class="keyword">catch</span> (ClassCastException e) &#123;</span><br><span class="line">	    log.error(sm.getString(<span class="string">"hostConfig.cce"</span>, event.getLifecycle()), e);</span><br><span class="line">	    <span class="keyword">return</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Process the event that has occurred</span></span><br><span class="line">	<span class="keyword">if</span> (event.getType().equals(Lifecycle.PERIODIC_EVENT)) &#123;</span><br><span class="line">	    check();</span><br><span class="line">	&#125; <span class="keyword">else</span> <span class="keyword">if</span> (event.getType().equals(Lifecycle.START_EVENT)) &#123;</span><br><span class="line">	    start();</span><br><span class="line">	&#125; <span class="keyword">else</span> <span class="keyword">if</span> (event.getType().equals(Lifecycle.STOP_EVENT)) &#123;</span><br><span class="line">	    stop();</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>随后会调用start方法，并在start方法中判断host的deployOnStartup属性是否为true，进而确定是否要部署应用：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">if</span> (host.getCreateDirs()) &#123;</span><br><span class="line">	    File[] dirs = <span class="keyword">new</span> File[] &#123;host.getAppBaseFile(),host.getConfigBaseFile()&#125;;</span><br><span class="line">	    <span class="keyword">for</span> (<span class="keyword">int</span> i=<span class="number">0</span>; i&lt;dirs.length; i++) &#123;</span><br><span class="line">	        <span class="keyword">if</span> (!dirs[i].mkdirs() &amp;&amp; !dirs[i].isDirectory()) &#123;</span><br><span class="line">	            log.error(sm.getString(<span class="string">"hostConfig.createDirs"</span>,dirs[i]));</span><br><span class="line">	        &#125;</span><br><span class="line">	    &#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!host.getAppBaseFile().isDirectory()) &#123;</span><br><span class="line">	    log.error(sm.getString(<span class="string">"hostConfig.appBase"</span>, host.getName(),</span><br><span class="line">	            host.getAppBaseFile().getPath()));</span><br><span class="line">	    host.setDeployOnStartup(<span class="keyword">false</span>);</span><br><span class="line">	    host.setAutoDeploy(<span class="keyword">false</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (host.getDeployOnStartup())</span><br><span class="line">	    deployApps();</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>deployApps方法如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">deployApps</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	File appBase = host.getAppBaseFile();</span><br><span class="line">	File configBase = host.getConfigBaseFile();</span><br><span class="line">	String[] filteredAppPaths = filterAppPaths(appBase.list());</span><br><span class="line">	<span class="comment">// Deploy XML descriptors from configBase</span></span><br><span class="line">	deployDescriptors(configBase, configBase.list());</span><br><span class="line">	<span class="comment">// Deploy WARs</span></span><br><span class="line">	deployWARs(appBase, filteredAppPaths);</span><br><span class="line">	<span class="comment">// Deploy expanded folders</span></span><br><span class="line">	deployDirectories(appBase, filteredAppPaths);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其中host中的一些属性解释如下：</p>
+<blockquote>
+<p>appBase:应用部署的目录,默认webapps<br>xmlBase：通过xml形式部署应用时xml文件路径，默认null<br>hostConfigBase：此属性和xmlBase功能类似,，默认null，优先级hostConfigBase&gt;xmlBase&gt;default路径会指向${catalina.base}/conf/engine name/host name 目录</p>
+</blockquote>
+<p>getConfigBaseFile实际获取的就是hostConfigBase:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> File <span class="title">getConfigBaseFile</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">if</span> (hostConfigBase != <span class="keyword">null</span>) &#123;</span><br><span class="line">	    <span class="keyword">return</span> hostConfigBase;</span><br><span class="line">	&#125;</span><br><span class="line">	String path = <span class="keyword">null</span>;</span><br><span class="line">	<span class="keyword">if</span> (getXmlBase()!=<span class="keyword">null</span>) &#123;</span><br><span class="line">	    path = getXmlBase();</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">	    StringBuilder xmlDir = <span class="keyword">new</span> StringBuilder(<span class="string">"conf"</span>);</span><br><span class="line">	    Container parent = getParent();</span><br><span class="line">	    <span class="keyword">if</span> (parent <span class="keyword">instanceof</span> Engine) &#123;</span><br><span class="line">	        xmlDir.append(<span class="string">'/'</span>);</span><br><span class="line">	        xmlDir.append(parent.getName());</span><br><span class="line">	    &#125;</span><br><span class="line">	    xmlDir.append(<span class="string">'/'</span>);</span><br><span class="line">	    xmlDir.append(getName());</span><br><span class="line">	    path = xmlDir.toString();</span><br><span class="line">	&#125;</span><br><span class="line">	File file = <span class="keyword">new</span> File(path);</span><br><span class="line">	<span class="keyword">if</span> (!file.isAbsolute())</span><br><span class="line">	    file = <span class="keyword">new</span> File(getCatalinaBase(), path);</span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">	    file = file.getCanonicalFile();</span><br><span class="line">	&#125; <span class="keyword">catch</span> (IOException e) &#123;<span class="comment">// ignore</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">this</span>.hostConfigBase = file;</span><br><span class="line">	<span class="keyword">return</span> file;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>另外会执行的三个方法deployDescriptors、deployWARs、deployDirectories，下面分别分析下三个方法。</p>
+<h5 id="deployDescriptors"><a href="#deployDescriptors" class="headerlink" title="deployDescriptors"></a>deployDescriptors</h5><p>上面自定义部署文件的方式就是调用这个方法进行的部署的。列出ConfigBaseFile下的子文件，分别创建DeployDescriptor线程任务交给host的StartStopExecutor线程池去部署人，线程中实际调用的还是HostConfig的deployDescriptor方法，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">deployDescriptor</span><span class="params">(ContextName cn, File contextXml)</span> </span>&#123;</span><br><span class="line">	<span class="comment">// 创建app信息</span></span><br><span class="line">	DeployedApplication deployedApp =</span><br><span class="line">	        <span class="keyword">new</span> DeployedApplication(cn.getName(), <span class="keyword">true</span>);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">long</span> startTime = <span class="number">0</span>;</span><br><span class="line">	<span class="comment">// Assume this is a configuration descriptor and deploy it</span></span><br><span class="line">	<span class="keyword">if</span>(log.isInfoEnabled()) &#123;</span><br><span class="line">	   startTime = System.currentTimeMillis();</span><br><span class="line">	   log.info(sm.getString(<span class="string">"hostConfig.deployDescriptor"</span>,</span><br><span class="line">	            contextXml.getAbsolutePath()));</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	Context context = <span class="keyword">null</span>;</span><br><span class="line">	<span class="keyword">boolean</span> isExternalWar = <span class="keyword">false</span>;</span><br><span class="line">	<span class="keyword">boolean</span> isExternal = <span class="keyword">false</span>;</span><br><span class="line">	File expandedDocBase = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">try</span> (FileInputStream fis = <span class="keyword">new</span> FileInputStream(contextXml)) &#123;</span><br><span class="line">	    <span class="keyword">synchronized</span> (digesterLock) &#123;</span><br><span class="line">	        <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="comment">// 通过digester解析自定义的配置文件，创建StandardContext对象</span></span><br><span class="line">	            context = (Context) digester.parse(fis);</span><br><span class="line">	        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">	            log.error(sm.getString(</span><br><span class="line">	                    <span class="string">"hostConfig.deployDescriptor.error"</span>,</span><br><span class="line">	                    contextXml.getAbsolutePath()), e);</span><br><span class="line">	        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">	            <span class="keyword">if</span> (context == <span class="keyword">null</span>) &#123;</span><br><span class="line">	                context = <span class="keyword">new</span> FailedContext();</span><br><span class="line">	            &#125;</span><br><span class="line">	            digester.reset();</span><br><span class="line">	        &#125;</span><br><span class="line">	    &#125;</span><br><span class="line">		<span class="comment">//添加ContextConfig监听器给StandardContext</span></span><br><span class="line">	    Class&lt;?&gt; clazz = Class.forName(host.getConfigClass());</span><br><span class="line">	    LifecycleListener listener =</span><br><span class="line">	        (LifecycleListener) clazz.newInstance();</span><br><span class="line">	    context.addLifecycleListener(listener);</span><br><span class="line">		<span class="comment">//更新Context的名称和路径等，其名字和路径是ContextName中解析自定义配置文件的名字转换得到，所以说这种情况下在Context中配置path属性无效。</span></span><br><span class="line">	    context.setConfigFile(contextXml.toURI().toURL());</span><br><span class="line">	    context.setName(cn.getName());</span><br><span class="line">	    context.setPath(cn.getPath());</span><br><span class="line">	    context.setWebappVersion(cn.getVersion());</span><br><span class="line">	    <span class="comment">// Add the associated docBase to the redeployed list if it's a WAR</span></span><br><span class="line">	    <span class="keyword">if</span> (context.getDocBase() != <span class="keyword">null</span>) &#123;</span><br><span class="line">	        File docBase = <span class="keyword">new</span> File(context.getDocBase());</span><br><span class="line">	        <span class="keyword">if</span> (!docBase.isAbsolute()) &#123;</span><br><span class="line">	            docBase = <span class="keyword">new</span> File(host.getAppBaseFile(), context.getDocBase());</span><br><span class="line">	        &#125;</span><br><span class="line">	        <span class="comment">// If external docBase, register .xml as redeploy first</span></span><br><span class="line">	        <span class="keyword">if</span> (!docBase.getCanonicalPath().startsWith(</span><br><span class="line">	                host.getAppBaseFile().getAbsolutePath() + File.separator)) &#123;</span><br><span class="line">	            isExternal = <span class="keyword">true</span>;</span><br><span class="line">                <span class="comment">//redeployResources中放入需要监听的资源信息，当发生更改，应用会重部署</span></span><br><span class="line">                <span class="comment">//下面的reloadResources中放入需要监听的contex中的watchedResource资源信息，当发生更改，应用会重加载</span></span><br><span class="line">	            deployedApp.redeployResources.put(</span><br><span class="line">	                    contextXml.getAbsolutePath(),</span><br><span class="line">	                    Long.valueOf(contextXml.lastModified()));</span><br><span class="line">	            deployedApp.redeployResources.put(docBase.getAbsolutePath(),</span><br><span class="line">	                    Long.valueOf(docBase.lastModified()));</span><br><span class="line">	            <span class="keyword">if</span> (docBase.getAbsolutePath().toLowerCase(Locale.ENGLISH).endsWith(<span class="string">".war"</span>)) &#123;</span><br><span class="line">	                isExternalWar = <span class="keyword">true</span>;</span><br><span class="line">	            &#125;</span><br><span class="line">	        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">	            log.warn(sm.getString(<span class="string">"hostConfig.deployDescriptor.localDocBaseSpecified"</span>,</span><br><span class="line">	                     docBase));</span><br><span class="line">	            <span class="comment">// Ignore specified docBase</span></span><br><span class="line">	            context.setDocBase(<span class="keyword">null</span>);</span><br><span class="line">	        &#125;</span><br><span class="line">	    &#125;</span><br><span class="line">		<span class="comment">//通过Host的addChild方法将Context实例添加到Host中并启动</span></span><br><span class="line">	    host.addChild(context);</span><br><span class="line">	&#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">	    ExceptionUtils.handleThrowable(t);</span><br><span class="line">	    log.error(sm.getString(<span class="string">"hostConfig.deployDescriptor.error"</span>,</span><br><span class="line">	                           contextXml.getAbsolutePath()), t);</span><br><span class="line">	&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">	    <span class="comment">// Get paths for WAR and expanded WAR in appBase</span></span><br><span class="line"></span><br><span class="line">	    <span class="comment">// default to appBase dir + name</span></span><br><span class="line">	    expandedDocBase = <span class="keyword">new</span> File(host.getAppBaseFile(), cn.getBaseName());</span><br><span class="line">	    <span class="keyword">if</span> (context.getDocBase() != <span class="keyword">null</span></span><br><span class="line">	            &amp;&amp; !context.getDocBase().toLowerCase(Locale.ENGLISH).endsWith(<span class="string">".war"</span>)) &#123;</span><br><span class="line">	        <span class="comment">// first assume docBase is absolute</span></span><br><span class="line">	        expandedDocBase = <span class="keyword">new</span> File(context.getDocBase());</span><br><span class="line">	        <span class="keyword">if</span> (!expandedDocBase.isAbsolute()) &#123;</span><br><span class="line">	            <span class="comment">// if docBase specified and relative, it must be relative to appBase</span></span><br><span class="line">	            expandedDocBase = <span class="keyword">new</span> File(host.getAppBaseFile(), context.getDocBase());</span><br><span class="line">	        &#125;</span><br><span class="line">	    &#125;</span><br><span class="line"></span><br><span class="line">	    <span class="keyword">boolean</span> unpackWAR = unpackWARs;</span><br><span class="line">	    <span class="keyword">if</span> (unpackWAR &amp;&amp; context <span class="keyword">instanceof</span> StandardContext) &#123;</span><br><span class="line">	        unpackWAR = ((StandardContext) context).getUnpackWAR();</span><br><span class="line">	    &#125;</span><br><span class="line"></span><br><span class="line">	    <span class="comment">// Add the eventual unpacked WAR and all the resources which will be</span></span><br><span class="line">	    <span class="comment">// watched inside it</span></span><br><span class="line">	    <span class="keyword">if</span> (isExternalWar) &#123;</span><br><span class="line">	        <span class="keyword">if</span> (unpackWAR) &#123;</span><br><span class="line">	            deployedApp.redeployResources.put(expandedDocBase.getAbsolutePath(),</span><br><span class="line">	                    Long.valueOf(expandedDocBase.lastModified()));</span><br><span class="line">	            addWatchedResources(deployedApp, expandedDocBase.getAbsolutePath(), context);</span><br><span class="line">	        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">	            addWatchedResources(deployedApp, <span class="keyword">null</span>, context);</span><br><span class="line">	        &#125;</span><br><span class="line">	    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">	        <span class="comment">// Find an existing matching war and expanded folder</span></span><br><span class="line">	        <span class="keyword">if</span> (!isExternal) &#123;</span><br><span class="line">	            File warDocBase = <span class="keyword">new</span> File(expandedDocBase.getAbsolutePath() + <span class="string">".war"</span>);</span><br><span class="line">	            <span class="keyword">if</span> (warDocBase.exists()) &#123;</span><br><span class="line">	                deployedApp.redeployResources.put(warDocBase.getAbsolutePath(),</span><br><span class="line">	                        Long.valueOf(warDocBase.lastModified()));</span><br><span class="line">	            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">	                <span class="comment">// Trigger a redeploy if a WAR is added</span></span><br><span class="line">	                deployedApp.redeployResources.put(</span><br><span class="line">	                        warDocBase.getAbsolutePath(),</span><br><span class="line">	                        Long.valueOf(<span class="number">0</span>));</span><br><span class="line">	            &#125;</span><br><span class="line">	        &#125;</span><br><span class="line">	        <span class="keyword">if</span> (unpackWAR) &#123;</span><br><span class="line">	            deployedApp.redeployResources.put(expandedDocBase.getAbsolutePath(),</span><br><span class="line">	                    Long.valueOf(expandedDocBase.lastModified()));</span><br><span class="line">	            addWatchedResources(deployedApp,</span><br><span class="line">	                    expandedDocBase.getAbsolutePath(), context);</span><br><span class="line">	        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">	            addWatchedResources(deployedApp, <span class="keyword">null</span>, context);</span><br><span class="line">	        &#125;</span><br><span class="line">	        <span class="keyword">if</span> (!isExternal) &#123;</span><br><span class="line">	            <span class="comment">// For external docBases, the context.xml will have been</span></span><br><span class="line">	            <span class="comment">// added above.</span></span><br><span class="line">	            deployedApp.redeployResources.put(</span><br><span class="line">	                    contextXml.getAbsolutePath(),</span><br><span class="line">	                    Long.valueOf(contextXml.lastModified()));</span><br><span class="line">	        &#125;</span><br><span class="line">	    &#125;</span><br><span class="line">	    <span class="comment">// Add the global redeploy resources (which are never deleted) at</span></span><br><span class="line">	    <span class="comment">// the end so they don't interfere with the deletion process</span></span><br><span class="line">	    addGlobalRedeployResources(deployedApp);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// 将此应用放入deployed的状态信息中，表示已经部署了</span></span><br><span class="line">	<span class="keyword">if</span> (host.findChild(context.getName()) != <span class="keyword">null</span>) &#123;</span><br><span class="line">	    deployed.put(context.getName(), deployedApp);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (log.isInfoEnabled()) &#123;</span><br><span class="line">	    log.info(sm.getString(<span class="string">"hostConfig.deployDescriptor.finished"</span>,</span><br><span class="line">	        contextXml.getAbsolutePath(), Long.valueOf(System.currentTimeMillis() - startTime)));</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>总结：</p>
+<blockquote>
+<p>1、需要根据部署文件名做一些转换得到ContextName对象，里面包含了一些信息：baseName、name、path、version，转换规则可以参考tomcat文档</p>
+<p>2、解析部署文件构建StandardContext对象，设置一些属性，添加ContextConfig的LifecycleListener，部署逻辑主要就在这个监听器里，添加到host的chaild当中，随着context启动，解析context.xml、web.xml合并xml等，创建StandardWrapper，加入servlet的信息等</p>
+<p>3、最后要根据watchResource添加到DeployedApplication的reloadResources当中，为文件名key，value为文件时间戳；以下信息添加到redeployResources信息中：</p>
+<blockquote>
+<p>a、${catalina.base}/conf/engine name/host name/部署文件</p>
+<p>b、appname.xm中的docBase的文件</p>
+<p>c、conf/context.xml</p>
+</blockquote>
+<p>最后deployed中put（name，DeployedApplication）信息</p>
+</blockquote>
+<h5 id="deployWARs"><a href="#deployWARs" class="headerlink" title="deployWARs"></a>deployWARs</h5><p>部署war包的形式同样创建DeployWar线程来做，主要调用deployWAR方法来部署，代码主要逻辑和上面的deployDescriptor类似，就不贴代码了，主要逻辑如下：</p>
+<blockquote>
+<p>1、直接部署war包要考虑几种情况：是否解压的目录下存在context.xml、war中是否有context.xml，如果过存在则解析xml创建StandardContext，否则直接反射创建</p>
+<p>2、解压war包之后会在META-INF下生成war-tracker文件，之后根据这个文件的时间戳和war的时间戳是否相等来决定下次部署时是否重新解压文件</p>
+<p>3、要根据watchResource添加到DeployedApplication的reloadResources当中，为文件名key，value为文件时间戳；将以下信息添加到redeployResources信息中：</p>
+<blockquote>
+<p>a、${catalina.base}/conf/engine name/host name/appname.xml</p>
+<p>b、appBase/appname目录</p>
+<p>c、appBase/appname.war文件</p>
+<p>d、appBase/appname/META-INF/context.xml</p>
+<p>e、conf/context.xml</p>
+</blockquote>
+<p>4、设置copyXML，deployXML这两个属性，它们都来自Host，默认Host的copyXML为false，deployXML为true</p>
+</blockquote>
+<h5 id="deployDirectories"><a href="#deployDirectories" class="headerlink" title="deployDirectories"></a>deployDirectories</h5><p>同样的，部署目录相应的调用deployDirectory方法，主要逻辑如下：</p>
+<blockquote>
+<p>1、与deployDescriptor不同的是，如果应用/META-INF/context.xml存在，则先解析生成StandardContext，其他逻辑都是类似的</p>
+<p>2、要根据watchResource添加到DeployedApplication的reloadResources当中，为文件名key，value为文件时间戳；将以下信息添加到redeployResources信息中：</p>
+<blockquote>
+<p>a、${catalina.base}/conf/engine name/host name/appname.xml</p>
+<p>b、appBase/appname目录</p>
+<p>c、appBase/appname.war文件</p>
+<p>d、appBase/appname/META-INF/context.xml</p>
+<p>e、conf/context.xml</p>
+</blockquote>
+<p>3、设置copyXML，deployXML这两个属性，它们都来自Host，默认Host的copyXML为false，deployXML为true</p>
+</blockquote>
+<h3 id="应用reload和redeploy"><a href="#应用reload和redeploy" class="headerlink" title="应用reload和redeploy"></a>应用reload和redeploy</h3><p>从上面我们知道所有应用部署之后，都会在DeployApplication中的reloadResources和redeployResources中增加监视资源，这些资源生效在哪儿？实际上tomcat启动之后，每个container都可以启动一个backgroundProcessor线程定时的做一些事情，但是默认只有StandardEngine启动时才会创建此线程，由backgroundProcessorDelay属性控制，在StandardEngine构造函数默认设置成了10，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">StandardEngine</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">super</span>();</span><br><span class="line">	pipeline.setBasic(<span class="keyword">new</span> StandardEngineValve());</span><br><span class="line">	<span class="comment">/* Set the jmvRoute using the system property jvmRoute */</span></span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">	    setJvmRoute(System.getProperty(<span class="string">"jvmRoute"</span>));</span><br><span class="line">	&#125; <span class="keyword">catch</span>(Exception ex) &#123;</span><br><span class="line">	    log.warn(sm.getString(<span class="string">"standardEngine.jvmRouteFail"</span>));</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// By default, the engine will hold the reloading thread</span></span><br><span class="line">	backgroundProcessorDelay = <span class="number">10</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后容器初始化启动时调用threadStart，来启动background线程，backgroundProcessorDelay 必须大于0：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">threadStart</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">if</span> (thread != <span class="keyword">null</span>)</span><br><span class="line">	    <span class="keyword">return</span>;</span><br><span class="line">	<span class="keyword">if</span> (backgroundProcessorDelay &lt;= <span class="number">0</span>)</span><br><span class="line">	    <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">	threadDone = <span class="keyword">false</span>;</span><br><span class="line">	String threadName = <span class="string">"ContainerBackgroundProcessor["</span> + toString() + <span class="string">"]"</span>;</span><br><span class="line">	thread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> ContainerBackgroundProcessor(), threadName);</span><br><span class="line">	thread.setDaemon(<span class="keyword">true</span>);</span><br><span class="line">	thread.start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>ContainerBackgroundProcessor线程中主要调用了processChildren（container）方法，processChildren方法调用了container.backgroundProcess方法，并且递归调用对container的children执行processChildren逻辑，因此会调用到StandardHost的backgroundProcess方法中，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">processChildren</span><span class="params">(Container container)</span> </span>&#123;</span><br><span class="line">	ClassLoader originalClassLoader = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">	<span class="keyword">if</span> (container <span class="keyword">instanceof</span> Context) &#123;</span><br><span class="line">	    Loader loader = ((Context) container).getLoader();</span><br><span class="line">	    <span class="comment">// Loader will be null for FailedContext instances</span></span><br><span class="line">	    <span class="keyword">if</span> (loader == <span class="keyword">null</span>) &#123;</span><br><span class="line">	        <span class="keyword">return</span>;</span><br><span class="line">	    &#125;</span><br><span class="line"></span><br><span class="line">	    <span class="comment">// Ensure background processing for Contexts and Wrappers</span></span><br><span class="line">	    <span class="comment">// is performed under the web app's class loader</span></span><br><span class="line">	    originalClassLoader = ((Context) container).bind(<span class="keyword">false</span>, <span class="keyword">null</span>);</span><br><span class="line">	&#125;</span><br><span class="line">	container.backgroundProcess();</span><br><span class="line">	Container[] children = container.findChildren();</span><br><span class="line">	<span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; children.length; i++) &#123;</span><br><span class="line">	    <span class="keyword">if</span> (children[i].getBackgroundProcessorDelay() &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">	        processChildren(children[i]);</span><br><span class="line">	    &#125;</span><br><span class="line">	&#125;</span><br><span class="line">	&#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">	ExceptionUtils.handleThrowable(t);</span><br><span class="line">	log.error(<span class="string">"Exception invoking periodic operation: "</span>, t);</span><br><span class="line">	&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">	<span class="keyword">if</span> (container <span class="keyword">instanceof</span> Context) &#123;</span><br><span class="line">	    ((Context) container).unbind(<span class="keyword">false</span>, originalClassLoader);</span><br><span class="line">	&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>backgroundProcess方法会触发所有container下的listener的Lifecycle.PERIODIC_EVENT事件，因此StandardHost的HostConfig监听器也收到了此事件并处理了，通过上面HostConfig.lifecycleEvent内容，我们知道嗲用了其check方法来做资源校验，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">check</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">//首先判断StandardHost是否支持自动部署</span></span><br><span class="line">	<span class="keyword">if</span> (host.getAutoDeploy()) &#123;</span><br><span class="line">	    <span class="comment">//获取已经部署的应用</span></span><br><span class="line">	    DeployedApplication[] apps =</span><br><span class="line">	        deployed.values().toArray(<span class="keyword">new</span> DeployedApplication[<span class="number">0</span>]);</span><br><span class="line">	    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; apps.length; i++) &#123;</span><br><span class="line">	        <span class="keyword">if</span> (!isServiced(apps[i].name))</span><br><span class="line">	            checkResources(apps[i]);</span><br><span class="line">	    &#125;</span><br><span class="line"></span><br><span class="line">	    <span class="comment">// Check for old versions of applications that can now be undeployed</span></span><br><span class="line">	    <span class="keyword">if</span> (host.getUndeployOldVersions()) &#123;</span><br><span class="line">	        checkUndeploy();</span><br><span class="line">	    &#125;</span><br><span class="line"></span><br><span class="line">	    <span class="comment">// Hotdeploy applications</span></span><br><span class="line">	    deployApps();</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="redeploy"><a href="#redeploy" class="headerlink" title="redeploy"></a>redeploy</h4><p>checkResources中检查需要重部署资源代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br></pre></td><td class="code"><pre><span class="line">String[] resources =</span><br><span class="line">    app.redeployResources.keySet().toArray(<span class="keyword">new</span> String[<span class="number">0</span>]);</span><br><span class="line"><span class="comment">// Offset the current time by the resolution of File.lastModified()</span></span><br><span class="line"><span class="keyword">long</span> currentTimeWithResolutionOffset =</span><br><span class="line">        System.currentTimeMillis() - FILE_MODIFICATION_RESOLUTION_MS;</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; resources.length; i++) &#123;</span><br><span class="line">    File resource = <span class="keyword">new</span> File(resources[i]);</span><br><span class="line">    <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">        log.debug(<span class="string">"Checking context["</span> + app.name +</span><br><span class="line">                <span class="string">"] redeploy resource "</span> + resource);</span><br><span class="line">    <span class="keyword">long</span> lastModified =</span><br><span class="line">            app.redeployResources.get(resources[i]).longValue();</span><br><span class="line">    <span class="keyword">if</span> (resource.exists() || lastModified == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">// File.lastModified() has a resolution of 1s (1000ms). The last</span></span><br><span class="line">        <span class="comment">// modified time has to be more than 1000ms ago to ensure that</span></span><br><span class="line">        <span class="comment">// modifications that take place in the same second are not</span></span><br><span class="line">        <span class="comment">// missed. See Bug 57765.</span></span><br><span class="line">        <span class="keyword">if</span> (resource.lastModified() != lastModified &amp;&amp; (!host.getAutoDeploy() ||</span><br><span class="line">                resource.lastModified() &lt; currentTimeWithResolutionOffset)) &#123;</span><br><span class="line">            <span class="comment">//监视资源是目录，直接更新时间</span></span><br><span class="line">            <span class="keyword">if</span> (resource.isDirectory()) &#123;</span><br><span class="line">                <span class="comment">// No action required for modified directory</span></span><br><span class="line">                app.redeployResources.put(resources[i],</span><br><span class="line">                        Long.valueOf(resource.lastModified()));</span><br><span class="line">            <span class="comment">//应用存在Context描述文件，并且当前变更的是WAR包时</span></span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (app.hasDescriptor &amp;&amp;</span><br><span class="line">                    resource.getName().toLowerCase(</span><br><span class="line">                            Locale.ENGLISH).endsWith(<span class="string">".war"</span>)) &#123;</span><br><span class="line">                <span class="comment">// Modified WAR triggers a reload if there is an XML</span></span><br><span class="line">                <span class="comment">// file present</span></span><br><span class="line">                <span class="comment">// The only resource that should be deleted is the</span></span><br><span class="line">                <span class="comment">// expanded WAR (if any)</span></span><br><span class="line">                Context context = (Context) host.findChild(app.name);</span><br><span class="line">                String docBase = context.getDocBase();</span><br><span class="line">                <span class="comment">//docBase不以war结尾，则先删除解压目录，然后再重新reload，在context启动前会解压war包</span></span><br><span class="line">                <span class="keyword">if</span> (!docBase.toLowerCase(Locale.ENGLISH).endsWith(<span class="string">".war"</span>)) &#123;</span><br><span class="line">                    <span class="comment">// This is an expanded directory</span></span><br><span class="line">                    File docBaseFile = <span class="keyword">new</span> File(docBase);</span><br><span class="line">                    <span class="keyword">if</span> (!docBaseFile.isAbsolute()) &#123;</span><br><span class="line">                        docBaseFile = <span class="keyword">new</span> File(host.getAppBaseFile(),</span><br><span class="line">                                docBase);</span><br><span class="line">                    &#125;</span><br><span class="line">                    reload(app, docBaseFile, resource.getAbsolutePath());</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    reload(app, <span class="keyword">null</span>, <span class="keyword">null</span>);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="comment">// Update times</span></span><br><span class="line">                app.redeployResources.put(resources[i],</span><br><span class="line">                        Long.valueOf(resource.lastModified()));</span><br><span class="line">                app.timestamp = System.currentTimeMillis();</span><br><span class="line">                <span class="keyword">boolean</span> unpackWAR = unpackWARs;</span><br><span class="line">                <span class="keyword">if</span> (unpackWAR &amp;&amp; context <span class="keyword">instanceof</span> StandardContext) &#123;</span><br><span class="line">                    unpackWAR = ((StandardContext) context).getUnpackWAR();</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (unpackWAR) &#123;</span><br><span class="line">                    addWatchedResources(app, context.getDocBase(), context);</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    addWatchedResources(app, <span class="keyword">null</span>, context);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123; <span class="comment">//先卸载，再重新部署</span></span><br><span class="line">                <span class="comment">// Everything else triggers a redeploy</span></span><br><span class="line">                <span class="comment">// (just need to undeploy here, deploy will follow)</span></span><br><span class="line">                undeploy(app);</span><br><span class="line">                deleteRedeployResources(app, resources, i, <span class="keyword">false</span>);</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// There is a chance the the resource was only missing</span></span><br><span class="line">        <span class="comment">// temporarily eg renamed during a text editor save</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            Thread.sleep(<span class="number">500</span>);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (InterruptedException e1) &#123;</span><br><span class="line">            <span class="comment">// Ignore</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// Recheck the resource to see if it was really deleted</span></span><br><span class="line">        <span class="keyword">if</span> (resource.exists()) &#123;</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (lastModified == <span class="number">0L</span>) &#123;</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// Undeploy application</span></span><br><span class="line">        undeploy(app);</span><br><span class="line">        deleteRedeployResources(app, resources, i, <span class="keyword">true</span>);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>总结：</p>
+<blockquote>
+<p>如果监视资源是目录，则只是更新监视资源列表的lastModified</p>
+<p>如果应用存在Context描述文件，并且当前变更的是WAR包时，且docBase不以.war结尾（即Context指向的是WAR解压目录），则先删除解压目录，然后重新加载，否则直接重新加载，并更新监视资源信息</p>
+<p>其他直接卸载应用，并通过deployApps重新部署应用</p>
+</blockquote>
+<h4 id="reload"><a href="#reload" class="headerlink" title="reload"></a>reload</h4><p>checkResources中检查需要重加载资源代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">resources = app.reloadResources.keySet().toArray(<span class="keyword">new</span> String[<span class="number">0</span>]);</span><br><span class="line"><span class="keyword">boolean</span> update = <span class="keyword">false</span>;</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; resources.length; i++) &#123;</span><br><span class="line">    File resource = <span class="keyword">new</span> File(resources[i]);</span><br><span class="line">    <span class="keyword">if</span> (log.isDebugEnabled()) &#123;</span><br><span class="line">        log.debug(<span class="string">"Checking context["</span> + app.name + <span class="string">"] reload resource "</span> + resource);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">long</span> lastModified = app.reloadResources.get(resources[i]).longValue();</span><br><span class="line">    <span class="comment">// File.lastModified() has a resolution of 1s (1000ms). The last</span></span><br><span class="line">    <span class="comment">// modified time has to be more than 1000ms ago to ensure that</span></span><br><span class="line">    <span class="comment">// modifications that take place in the same second are not</span></span><br><span class="line">    <span class="comment">// missed. See Bug 57765.</span></span><br><span class="line">    <span class="keyword">if</span> ((resource.lastModified() != lastModified &amp;&amp;</span><br><span class="line">            (!host.getAutoDeploy() ||</span><br><span class="line">                    resource.lastModified() &lt; currentTimeWithResolutionOffset)) ||</span><br><span class="line">            update) &#123;</span><br><span class="line">        <span class="keyword">if</span> (!update) &#123;</span><br><span class="line">            <span class="comment">// Reload application</span></span><br><span class="line">            reload(app, <span class="keyword">null</span>, <span class="keyword">null</span>);</span><br><span class="line">            update = <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// Update times. More than one file may have been updated. We</span></span><br><span class="line">        <span class="comment">// don't want to trigger a series of reloads.</span></span><br><span class="line">        app.reloadResources.put(resources[i],</span><br><span class="line">                Long.valueOf(resource.lastModified()));</span><br><span class="line">    &#125;</span><br><span class="line">    app.timestamp = System.currentTimeMillis();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>当该重加载资源文件发生变化时，不需要重新部署应用，只需调用context.reload重新加载应用（reload，即先stop，然后start），其实除此之外，应用下classes和lib下类文件的更新也会导致应用reload，原因是WebappLoader的backgroundProcess方法中做了一些校验，但是必须配置context的reloadable=true才会生效：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">backgroundProcess</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">if</span> (reloadable &amp;&amp; modified()) &#123;</span><br><span class="line">	    <span class="keyword">try</span> &#123;</span><br><span class="line">	        Thread.currentThread().setContextClassLoader</span><br><span class="line">	            (WebappLoader.class.getClassLoader());</span><br><span class="line">	        <span class="keyword">if</span> (context != <span class="keyword">null</span>) &#123;</span><br><span class="line">	            context.reload();</span><br><span class="line">	        &#125;</span><br><span class="line">	    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">	        <span class="keyword">if</span> (context != <span class="keyword">null</span> &amp;&amp; context.getLoader() != <span class="keyword">null</span>) &#123;</span><br><span class="line">	            Thread.currentThread().setContextClassLoader</span><br><span class="line">	                (context.getLoader().getClassLoader());</span><br><span class="line">	        &#125;</span><br><span class="line">	    &#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>tomcat的应用部署方式：</p>
+<blockquote>
+<p>1、server.xml配置方式</p>
+<p>2、自定义部署文件方式</p>
+<p>3、直接将应用放入webapps目录，又分为三种</p>
+<blockquote>
+<p>a、deployDescriptors也就是自定义部署文件方式</p>
+<p>b、deployWARs部署war包</p>
+<p>c、deployDirectories部署目录</p>
+</blockquote>
+</blockquote>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    Bing Li
+  </li>
+  <li class="post-copyright-created">
+    <strong>发表时间：</strong>
+ 2018-07-04 15:11:03
+  </li>
+  <li class="post-copyright-update">
+    <strong>最后更新：</strong>
+ 2018-07-04 15:11:03
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://bingli-borland.github.io/blog/2018/07/04/Tomcat源码分析—应用部署分析(一)/" title="Tomcat源码分析—应用部署分析(一)">https://bingli-borland.github.io/blog/2018/07/04/Tomcat源码分析—应用部署分析(一)/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/blog/tags/java/" rel="tag"># java</a>
+          
+            <a href="/blog/tags/tomcat/" rel="tag"># tomcat</a>
+          
+            <a href="/blog/tags/deploy/" rel="tag"># deploy</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/blog/2018/06/15/Dubbo源码分析—初体验/" rel="next" title="Dubbo源码分析—初体验">
+                <i class="fa fa-chevron-left"></i> Dubbo源码分析—初体验
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/" rel="prev" title="BUG分析—BES8.2安全模式下控制台登录问题">
+                BUG分析—BES8.2安全模式下控制台登录问题 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      
+        <div id="gitment-container"></div>
+      
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Bing Li</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/blog/archives/">
+              
+                  <span class="site-state-item-count">24</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/blog/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/blog/tags/index.html">
+                  <span class="site-state-item-count">46</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/blog/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          <div class="links-of-author motion-element">
+            
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/bingli-borland" target="_blank" title="GitHub">
+                    
+                      <i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="mailto:1042996632@qq.com" target="_blank" title="E-Mail">
+                    
+                      <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            
+          </div>
+    
+    <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-globe"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                  <li class="links-of-blogroll-item">
+                    <a href="http://jm.taobao.org/" title="阿里中间件博客" target="_blank">阿里中间件博客</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="http://blog.51cto.com/guojuanjun" title="天下无贼" target="_blank">天下无贼</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="https://segmentfault.com/u/wuyangchun" title="Linux����" target="_blank">wuyangchun(Linux)</a>
+                  </li>
+              </ul>
+            </div>
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#源码"><span class="nav-number">2.</span> <span class="nav-text">源码</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#server-xml中配置Context元素"><span class="nav-number">2.1.</span> <span class="nav-text">server.xml中配置Context元素</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#自定义部署文件"><span class="nav-number">2.2.</span> <span class="nav-text">自定义部署文件</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#HostConfig"><span class="nav-number">2.3.</span> <span class="nav-text">HostConfig</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#deployDescriptors"><span class="nav-number">2.3.1.</span> <span class="nav-text">deployDescriptors</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#deployWARs"><span class="nav-number">2.3.2.</span> <span class="nav-text">deployWARs</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#deployDirectories"><span class="nav-number">2.3.3.</span> <span class="nav-text">deployDirectories</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#应用reload和redeploy"><span class="nav-number">3.</span> <span class="nav-text">应用reload和redeploy</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#redeploy"><span class="nav-number">3.1.</span> <span class="nav-text">redeploy</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#reload"><span class="nav-number">3.2.</span> <span class="nav-text">reload</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2017 &mdash; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Bing Li</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a></div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/utils.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/motion.js?v=5.1.3"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/affix.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/schemes/pisces.js?v=5.1.3"></script>
+
+
+
+  
+  <script type="text/javascript" src="/blog/js/src/scrollspy.js?v=5.1.3"></script>
+<script type="text/javascript" src="/blog/js/src/post-details.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/bootstrap.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+<!-- LOCAL: You can save these files to your site and update links -->
+    
+        
+        <link rel="stylesheet" href="https://aimingoo.github.io/gitmint/style/default.css">
+        <script src="https://aimingoo.github.io/gitmint/dist/gitmint.browser.js"></script>
+    
+<!-- END LOCAL -->
+
+    
+
+    
+      <script type="text/javascript">
+      function renderGitment(){
+        var gitment = new Gitmint({
+            id: window.location.pathname, 
+            owner: 'bingli-borland',
+            repo: 'blog',
+            
+            lang: "" || navigator.language || navigator.systemLanguage || navigator.userLanguage,
+            
+            oauth: {
+            
+            
+                client_secret: '15d5986f446770cf9d00de45fe9cad58e0e890f3',
+            
+                client_id: '2827532caba6f447f0b0'
+            }});
+        gitment.render('gitment-container');
+      }
+
+      
+      renderGitment();
+      
+      </script>
+    
+
+
+
+
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/blog/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("UDWbbilpB75dbOg2gXfE9jqT-gzGzoHsz", "tdIIS5nlhxM9psPaMOOqtKLe");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

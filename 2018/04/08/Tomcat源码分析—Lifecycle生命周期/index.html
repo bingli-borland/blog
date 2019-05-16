@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/blog/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/blog/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/blog/css/main.css?v=5.1.3" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/blog/images/apple-touch-icon-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/blog/images/favicon-32x32-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/blog/images/favicon-16x16-next.png?v=5.1.3">
+
+
+  <link rel="mask-icon" href="/blog/images/logo.svg?v=5.1.3" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="java,tomcat,server,lifecycle,">
+
+
+
+
+
+  <link rel="alternate" href="/blog/atom.xml" title="技术与生活" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="前言在tomcat中有很多组件，如果需要一个一个启动，不仅麻烦，而且容易遗漏。使用Lifecycle管理启动、停止组件就可以解决这个问题。tomcat核心组件又包含和被包含的关系，也就是父组件和子组件的关系，子组件由父组件启动，这样只要启动根组件即可把其他组件都启动起来。例如Server包含service，service包含container和connector。Lifecycle中主要类和接口以">
+<meta name="keywords" content="java,tomcat,server,lifecycle">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tomcat源码分析—Lifecycle生命周期">
+<meta property="og:url" content="https://bingli-borland.github.io/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/index.html">
+<meta property="og:site_name" content="技术与生活">
+<meta property="og:description" content="前言在tomcat中有很多组件，如果需要一个一个启动，不仅麻烦，而且容易遗漏。使用Lifecycle管理启动、停止组件就可以解决这个问题。tomcat核心组件又包含和被包含的关系，也就是父组件和子组件的关系，子组件由父组件启动，这样只要启动根组件即可把其他组件都启动起来。例如Server包含service，service包含container和connector。Lifecycle中主要类和接口以">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/lifecycle.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/start.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/stop.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/lifecycle-arch.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/server-i.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/service-i.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/container-i.jpg">
+<meta property="og:updated_time" content="2018-04-08T06:05:56.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tomcat源码分析—Lifecycle生命周期">
+<meta name="twitter:description" content="前言在tomcat中有很多组件，如果需要一个一个启动，不仅麻烦，而且容易遗漏。使用Lifecycle管理启动、停止组件就可以解决这个问题。tomcat核心组件又包含和被包含的关系，也就是父组件和子组件的关系，子组件由父组件启动，这样只要启动根组件即可把其他组件都启动起来。例如Server包含service，service包含container和connector。Lifecycle中主要类和接口以">
+<meta name="twitter:image" content="https://bingli-borland.github.io/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/lifecycle.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/blog/',
+    scheme: 'Gemini',
+    version: '5.1.3',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://bingli-borland.github.io/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/">
+
+
+
+
+
+  <title>Tomcat源码分析—Lifecycle生命周期 | 技术与生活</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/blog/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术与生活</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/blog/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/blog/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/blog/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/blog/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/blog/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://bingli-borland.github.io/blog/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Bing Li">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/blog/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术与生活">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Tomcat源码分析—Lifecycle生命周期</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-08T14:05:56+08:00">
+                2018-04-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/blog/categories/tomcat/" itemprop="url" rel="index">
+                    <span itemprop="name">tomcat</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count gitment-comments-count" data-xid="/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/" class="leancloud_visitors" data-flag-title="Tomcat源码分析—Lifecycle生命周期">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>在tomcat中有很多组件，如果需要一个一个启动，不仅麻烦，而且容易遗漏。使用Lifecycle管理启动、停止组件就可以解决这个问题。tomcat核心组件又包含和被包含的关系，也就是父组件和子组件的关系，子组件由父组件启动，这样只要启动根组件即可把其他组件都启动起来。例如Server包含service，service包含container和connector。Lifecycle中主要类和接口以及结构图如下：</p>
+<ol>
+<li>Lifecycle接口（要使用生命周期控制的类都会继承该类）</li>
+<li>LifecycleListener接口（监听器都会继承该类）</li>
+<li>LifecycleSupport类（用来对监听器进行管理）</li>
+<li>LifecycleEvent类（该类是一个辅助类，用来作为参数类型）</li>
+<li>LifecycleException类（异常类）</li>
+</ol>
+<a id="more"></a>
+<p><img src="/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/lifecycle.jpg" alt=""></p>
+<h3 id="Lifecycle状态变化"><a href="#Lifecycle状态变化" class="headerlink" title="Lifecycle状态变化"></a>Lifecycle状态变化</h3><p>Lifecycle接口时组件生命周期方法的通用接口，tomcat组件可以实现这个接口以提供一致的机制<br>启动和停止组件。组件状态转换图：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">           start()</span><br><span class="line"> -----------------------------</span><br><span class="line"> |                           |</span><br><span class="line"> | init()                    |</span><br><span class="line">NEW -»-- INITIALIZING        |</span><br><span class="line">| |           |              |     ------------------«-----------------------</span><br><span class="line">| |           |auto          |     |                                        |</span><br><span class="line">| |          \|/    start() \|/   \|/     <span class="function">auto          auto         <span class="title">stop</span><span class="params">()</span> |</span></span><br><span class="line"><span class="function">| |      INITIALIZED --»-- STARTING_PREP --»- STARTING --»- STARTED --»---  |</span></span><br><span class="line"><span class="function">| |         |                                                            |  |</span></span><br><span class="line"><span class="function">| |<span class="title">destroy</span><span class="params">()</span>|                                                            |  |</span></span><br><span class="line"><span class="function">| --»-----«--    ------------------------«--------------------------------  ^</span></span><br><span class="line"><span class="function">|     |          |                                                          |</span></span><br><span class="line"><span class="function">|     |         \|/          auto                 auto              <span class="title">start</span><span class="params">()</span> |</span></span><br><span class="line"><span class="function">|     |     STOPPING_PREP ----»---- STOPPING ------»----- STOPPED -----»-----</span></span><br><span class="line"><span class="function">|    \|/                               ^                     |  ^</span></span><br><span class="line"><span class="function">|     |               <span class="title">stop</span><span class="params">()</span>           |                     |  |</span></span><br><span class="line"><span class="function">|     |       --------------------------                     |  |</span></span><br><span class="line"><span class="function">|     |       |                                              |  |</span></span><br><span class="line"><span class="function">|     |       |    <span class="title">destroy</span><span class="params">()</span>                       <span class="title">destroy</span><span class="params">()</span> |  |</span></span><br><span class="line"><span class="function">|     |    FAILED ----»------ DESTROYING ---«-----------------  |</span></span><br><span class="line"><span class="function">|     |                        ^     |                          |</span></span><br><span class="line"><span class="function">|     |     <span class="title">destroy</span><span class="params">()</span>          |     |auto                      |</span></span><br><span class="line"><span class="function">|     --------»-----------------    \|/                         |</span></span><br><span class="line"><span class="function">|                                 DESTROYED                     |</span></span><br><span class="line"><span class="function">|                                                               |</span></span><br><span class="line"><span class="function">|                            <span class="title">stop</span><span class="params">()</span>                             |</span></span><br><span class="line"><span class="function">---»------------------------------»------------------------------</span></span><br></pre></td></tr></table></figure>
+<p>需要注意以下几点：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">1.任何状态都能转换为FAILED状态</span><br><span class="line">2.当组件处于STARTING_PREP, STARTING or STARTED状态时，调用start方法无效</span><br><span class="line">3.当组件处于NEW状态时调用start（）方法将导致在进入start（）方法后立即调用init（）方法</span><br><span class="line">4.当组件处于STOPPING_PREP, STOPPING or STOPPED状态时，调用stop方法无效</span><br><span class="line">5.当组件处于NEW状态时可以调用stop（）方法会将组件状态转换为STOPPED，通常会遇到组件未能启动并且没有启动其所有子组件，组件停止时，它会尝试停止所有的子组件，即使它没有启动</span><br><span class="line">6.状态更改期间触发的LifecycleEvent时在触发状态转换的方法中定义的，如果尝试的转换无效，则不会触发LifecycleEvent</span><br><span class="line">7.尝试其他的状态转换（已经定义的状态转换之外）将会抛出LifecycleException</span><br></pre></td></tr></table></figure>
+<p>代码中的体现：</p>
+<p><img src="/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/start.jpg" alt=""></p>
+<p><img src="/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/stop.jpg" alt=""></p>
+<p>Lifestyle中主要定义了生命周期事件类型和生命周期接口方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Lifecycle</span> </span>&#123;</span><br><span class="line">	<span class="comment">// 事件类型</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String BEFORE_INIT_EVENT = <span class="string">"before_init"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String AFTER_INIT_EVENT = <span class="string">"after_init"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String START_EVENT = <span class="string">"start"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String BEFORE_START_EVENT = <span class="string">"before_start"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String AFTER_START_EVENT = <span class="string">"after_start"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String STOP_EVENT = <span class="string">"stop"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String BEFORE_STOP_EVENT = <span class="string">"before_stop"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String AFTER_STOP_EVENT = <span class="string">"after_stop"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String AFTER_DESTROY_EVENT = <span class="string">"after_destroy"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String BEFORE_DESTROY_EVENT = <span class="string">"before_destroy"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String PERIODIC_EVENT = <span class="string">"periodic"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String CONFIGURE_START_EVENT = <span class="string">"configure_start"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String CONFIGURE_STOP_EVENT = <span class="string">"configure_stop"</span>;</span><br><span class="line">	<span class="comment">// 事件监听器</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addLifecycleListener</span><span class="params">(LifecycleListener listener)</span></span>;</span><br><span class="line">    <span class="keyword">public</span> LifecycleListener[] findLifecycleListeners();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">removeLifecycleListener</span><span class="params">(LifecycleListener listener)</span></span>;</span><br><span class="line">	<span class="comment">// 生命周期管理</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">stop</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">destroy</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> LifecycleState <span class="title">getState</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getStateName</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>LifecycleState定义了组件状态以及获取此状态对应的事件LifecycleEvent：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">enum</span> LifecycleState &#123;</span><br><span class="line">    <span class="comment">// 组件状态类型，大部分有对应的事件</span></span><br><span class="line">    NEW(<span class="keyword">false</span>, <span class="keyword">null</span>),</span><br><span class="line">    INITIALIZING(<span class="keyword">false</span>, Lifecycle.BEFORE_INIT_EVENT),</span><br><span class="line">    INITIALIZED(<span class="keyword">false</span>, Lifecycle.AFTER_INIT_EVENT),</span><br><span class="line">    STARTING_PREP(<span class="keyword">false</span>, Lifecycle.BEFORE_START_EVENT),</span><br><span class="line">    STARTING(<span class="keyword">true</span>, Lifecycle.START_EVENT),</span><br><span class="line">    STARTED(<span class="keyword">true</span>, Lifecycle.AFTER_START_EVENT),</span><br><span class="line">    STOPPING_PREP(<span class="keyword">true</span>, Lifecycle.BEFORE_STOP_EVENT),</span><br><span class="line">    STOPPING(<span class="keyword">false</span>, Lifecycle.STOP_EVENT),</span><br><span class="line">    STOPPED(<span class="keyword">false</span>, Lifecycle.AFTER_STOP_EVENT),</span><br><span class="line">    DESTROYING(<span class="keyword">false</span>, Lifecycle.BEFORE_DESTROY_EVENT),</span><br><span class="line">    DESTROYED(<span class="keyword">false</span>, Lifecycle.AFTER_DESTROY_EVENT),</span><br><span class="line">    FAILED(<span class="keyword">false</span>, <span class="keyword">null</span>),</span><br><span class="line">	<span class="comment">// 当前状态下组件是否可用</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">boolean</span> available;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> String lifecycleEvent;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">LifecycleState</span><span class="params">(<span class="keyword">boolean</span> available, String lifecycleEvent)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.available = available;</span><br><span class="line">        <span class="keyword">this</span>.lifecycleEvent = lifecycleEvent;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isAvailable</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> available;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getLifecycleEvent</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> lifecycleEvent;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Lifecycle事件监听机制"><a href="#Lifecycle事件监听机制" class="headerlink" title="Lifecycle事件监听机制"></a>Lifecycle事件监听机制</h3><p>上面存在很多状态转换，如果想在某个状态转换事件发生前后做一些上面处理，tomcat采用了事件监听器模式来实现这个功能，tomcat的事件监听器组成部分：</p>
+<p>1.事件对象——LifestyleEvent，继承自java.util.EvenObject</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">LifecycleEvent</span> <span class="keyword">extends</span> <span class="title">EventObject</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">long</span> serialVersionUID = <span class="number">1L</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">LifecycleEvent</span><span class="params">(Lifecycle lifecycle, String type, Object data)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(lifecycle);</span><br><span class="line">        <span class="keyword">this</span>.type = type;</span><br><span class="line">        <span class="keyword">this</span>.data = data;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> Object data = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">private</span> String type = <span class="keyword">null</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">getData</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> (<span class="keyword">this</span>.data);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Lifecycle <span class="title">getLifecycle</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> (Lifecycle) getSource();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getType</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> (<span class="keyword">this</span>.type);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>2.事件源——server、service、connector、container</p>
+<p>3.事件监听器——LifecycleListener接口，定义了lifecycleEvent（LifestyleEvent）方法来处理事件</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">LifecycleListener</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lifecycleEvent</span><span class="params">(LifecycleEvent event)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>4.辅助类——LifecycleSupport维护了监听器数组，并提供注册、解注册、触发监听器等方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">LifecycleSupport</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">LifecycleSupport</span><span class="params">(Lifecycle lifecycle)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>();</span><br><span class="line">        <span class="keyword">this</span>.lifecycle = lifecycle;</span><br><span class="line">    &#125;</span><br><span class="line">	<span class="comment">// 事件源，引用了一个实现Lifecycle的组件</span></span><br><span class="line">    <span class="keyword">private</span> Lifecycle lifecycle = <span class="keyword">null</span>;</span><br><span class="line">	<span class="comment">// 监听器数组</span></span><br><span class="line">    <span class="keyword">private</span> LifecycleListener listeners[] = <span class="keyword">new</span> LifecycleListener[<span class="number">0</span>];</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Object listenersLock = <span class="keyword">new</span> Object(); <span class="comment">// Lock object for changes to listeners</span></span><br><span class="line">	</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addLifecycleListener</span><span class="params">(LifecycleListener listener)</span> </span>&#123;</span><br><span class="line">      <span class="keyword">synchronized</span> (listenersLock) &#123;</span><br><span class="line">          LifecycleListener results[] =</span><br><span class="line">            <span class="keyword">new</span> LifecycleListener[listeners.length + <span class="number">1</span>];</span><br><span class="line">          <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; listeners.length; i++)</span><br><span class="line">              results[i] = listeners[i];</span><br><span class="line">          results[listeners.length] = listener;</span><br><span class="line">          listeners = results;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> LifecycleListener[] findLifecycleListeners() &#123;</span><br><span class="line">        <span class="keyword">return</span> listeners;</span><br><span class="line">    &#125;</span><br><span class="line">	<span class="comment">// 触发事件</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">fireLifecycleEvent</span><span class="params">(String type, Object data)</span> </span>&#123;</span><br><span class="line">        LifecycleEvent event = <span class="keyword">new</span> LifecycleEvent(lifecycle, type, data);</span><br><span class="line">        LifecycleListener interested[] = listeners;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; interested.length; i++)</span><br><span class="line">            interested[i].lifecycleEvent(event);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">removeLifecycleListener</span><span class="params">(LifecycleListener listener)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (listenersLock) &#123;</span><br><span class="line">            <span class="keyword">int</span> n = -<span class="number">1</span>;</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; listeners.length; i++) &#123;</span><br><span class="line">                <span class="keyword">if</span> (listeners[i] == listener) &#123;</span><br><span class="line">                    n = i;</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (n &lt; <span class="number">0</span>)</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            LifecycleListener results[] =</span><br><span class="line">              <span class="keyword">new</span> LifecycleListener[listeners.length - <span class="number">1</span>];</span><br><span class="line">            <span class="keyword">int</span> j = <span class="number">0</span>;</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; listeners.length; i++) &#123;</span><br><span class="line">                <span class="keyword">if</span> (i != n)</span><br><span class="line">                    results[j++] = listeners[i];</span><br><span class="line">            &#125;</span><br><span class="line">            listeners = results;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>使用监听器生效整个流程，自定义XXXLifecycleListener，实现LifecycleListener接口，重写lifecycleEvent方法，调用LifecycleSupport的addLifecycleListener方法注册即可。但是在tomcat中，我们很少直接调用LifecycleSupport类来注册监听器，这是为什么？</p>
+<p>tomcat为了方便使用LifecycleSupport，又抽象出来了一个LifecycleBase抽象类，实现了Lifecycle接口，我们来看下这个类的结构：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">LifecycleBase</span> <span class="keyword">implements</span> <span class="title">Lifecycle</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Log log = LogFactory.getLog(LifecycleBase.class);</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> StringManager sm =</span><br><span class="line">        StringManager.getManager(<span class="string">"org.apache.catalina.util"</span>);</span><br><span class="line">    <span class="comment">// 监听器辅助类</span></span><br><span class="line">    <span class="keyword">private</span> LifecycleSupport lifecycle = <span class="keyword">new</span> LifecycleSupport(<span class="keyword">this</span>);</span><br><span class="line">    <span class="comment">// 默认组件的状态</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">volatile</span> LifecycleState state = LifecycleState.NEW;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 实现了监听器的注册、解注册、查找、方法，这些都在Lifecycle接口中定义</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addLifecycleListener</span><span class="params">(LifecycleListener listener)</span> </span>&#123;</span><br><span class="line">        lifecycle.addLifecycleListener(listener);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> LifecycleListener[] findLifecycleListeners() &#123;</span><br><span class="line">        <span class="keyword">return</span> lifecycle.findLifecycleListeners();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">removeLifecycleListener</span><span class="params">(LifecycleListener listener)</span> </span>&#123;</span><br><span class="line">        lifecycle.removeLifecycleListener(listener);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 定义了触发事件的方法，实际上就是调用辅助类来触发</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">fireLifecycleEvent</span><span class="params">(String type, Object data)</span> </span>&#123;</span><br><span class="line">        lifecycle.fireLifecycleEvent(type, data);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 实现了生命周期中主要的init、start、stop、destroy方法，而且都定义了各自的xxxInternal抽象方法</span></span><br><span class="line">    <span class="comment">// 这里实际上就是使用了模板模式，方便各个组件自己扩展，同时又不破坏原有的状态转换顺序</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!state.equals(LifecycleState.NEW)) &#123;</span><br><span class="line">            invalidTransition(Lifecycle.BEFORE_INIT_EVENT);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            setStateInternal(LifecycleState.INITIALIZING, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">            initInternal();</span><br><span class="line">            setStateInternal(LifecycleState.INITIALIZED, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">            ExceptionUtils.handleThrowable(t);</span><br><span class="line">            setStateInternal(LifecycleState.FAILED, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> LifecycleException(</span><br><span class="line">                    sm.getString(<span class="string">"lifecycleBase.initFail"</span>,toString()), t);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">initInternal</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (LifecycleState.STARTING_PREP.equals(state) || LifecycleState.STARTING.equals(state) ||</span><br><span class="line">                LifecycleState.STARTED.equals(state)) &#123;</span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled()) &#123;</span><br><span class="line">                Exception e = <span class="keyword">new</span> LifecycleException();</span><br><span class="line">                log.debug(sm.getString(<span class="string">"lifecycleBase.alreadyStarted"</span>, toString()), e);</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (log.isInfoEnabled()) &#123;</span><br><span class="line">                log.info(sm.getString(<span class="string">"lifecycleBase.alreadyStarted"</span>, toString()));</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (state.equals(LifecycleState.NEW)) &#123;</span><br><span class="line">            init();</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (state.equals(LifecycleState.FAILED)) &#123;</span><br><span class="line">            stop();</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!state.equals(LifecycleState.INITIALIZED) &amp;&amp;</span><br><span class="line">                !state.equals(LifecycleState.STOPPED)) &#123;</span><br><span class="line">            invalidTransition(Lifecycle.BEFORE_START_EVENT);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            setStateInternal(LifecycleState.STARTING_PREP, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">            startInternal();</span><br><span class="line">            <span class="keyword">if</span> (state.equals(LifecycleState.FAILED)) &#123;</span><br><span class="line">                <span class="comment">// This is a 'controlled' failure. The component put itself into the</span></span><br><span class="line">                <span class="comment">// FAILED state so call stop() to complete the clean-up.</span></span><br><span class="line">                stop();</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!state.equals(LifecycleState.STARTING)) &#123;</span><br><span class="line">                <span class="comment">// Shouldn't be necessary but acts as a check that sub-classes are</span></span><br><span class="line">                <span class="comment">// doing what they are supposed to.</span></span><br><span class="line">                invalidTransition(Lifecycle.AFTER_START_EVENT);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                setStateInternal(LifecycleState.STARTED, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">            <span class="comment">// This is an 'uncontrolled' failure so put the component into the</span></span><br><span class="line">            <span class="comment">// FAILED state and throw an exception.</span></span><br><span class="line">            ExceptionUtils.handleThrowable(t);</span><br><span class="line">            setStateInternal(LifecycleState.FAILED, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> LifecycleException(sm.getString(<span class="string">"lifecycleBase.startFail"</span>, toString()), t);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">startInternal</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">stop</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (LifecycleState.STOPPING_PREP.equals(state) || LifecycleState.STOPPING.equals(state) ||</span><br><span class="line">                LifecycleState.STOPPED.equals(state)) &#123;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled()) &#123;</span><br><span class="line">                Exception e = <span class="keyword">new</span> LifecycleException();</span><br><span class="line">                log.debug(sm.getString(<span class="string">"lifecycleBase.alreadyStopped"</span>, toString()), e);</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (log.isInfoEnabled()) &#123;</span><br><span class="line">                log.info(sm.getString(<span class="string">"lifecycleBase.alreadyStopped"</span>, toString()));</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (state.equals(LifecycleState.NEW)) &#123;</span><br><span class="line">            state = LifecycleState.STOPPED;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!state.equals(LifecycleState.STARTED) &amp;&amp; !state.equals(LifecycleState.FAILED)) &#123;</span><br><span class="line">            invalidTransition(Lifecycle.BEFORE_STOP_EVENT);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (state.equals(LifecycleState.FAILED)) &#123;</span><br><span class="line">                <span class="comment">// Don't transition to STOPPING_PREP as that would briefly mark the</span></span><br><span class="line">                <span class="comment">// component as available but do ensure the BEFORE_STOP_EVENT is</span></span><br><span class="line">                <span class="comment">// fired</span></span><br><span class="line">                fireLifecycleEvent(BEFORE_STOP_EVENT, <span class="keyword">null</span>);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                setStateInternal(LifecycleState.STOPPING_PREP, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            stopInternal();</span><br><span class="line"></span><br><span class="line">            <span class="comment">// Shouldn't be necessary but acts as a check that sub-classes are</span></span><br><span class="line">            <span class="comment">// doing what they are supposed to.</span></span><br><span class="line">            <span class="keyword">if</span> (!state.equals(LifecycleState.STOPPING) &amp;&amp; !state.equals(LifecycleState.FAILED)) &#123;</span><br><span class="line">                invalidTransition(Lifecycle.AFTER_STOP_EVENT);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            setStateInternal(LifecycleState.STOPPED, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">            ExceptionUtils.handleThrowable(t);</span><br><span class="line">            setStateInternal(LifecycleState.FAILED, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> LifecycleException(sm.getString(<span class="string">"lifecycleBase.stopFail"</span>,toString()), t);</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">this</span> <span class="keyword">instanceof</span> Lifecycle.SingleUse) &#123;</span><br><span class="line">                <span class="comment">// Complete stop process first</span></span><br><span class="line">                setStateInternal(LifecycleState.STOPPED, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">                destroy();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">stopInternal</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">destroy</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (LifecycleState.FAILED.equals(state)) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="comment">// Triggers clean-up</span></span><br><span class="line">                stop();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (LifecycleException e) &#123;</span><br><span class="line">                <span class="comment">// Just log. Still want to destroy.</span></span><br><span class="line">                log.warn(sm.getString(</span><br><span class="line">                        <span class="string">"lifecycleBase.destroyStopFail"</span>, toString()), e);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (LifecycleState.DESTROYING.equals(state) ||</span><br><span class="line">                LifecycleState.DESTROYED.equals(state)) &#123;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled()) &#123;</span><br><span class="line">                Exception e = <span class="keyword">new</span> LifecycleException();</span><br><span class="line">                log.debug(sm.getString(<span class="string">"lifecycleBase.alreadyDestroyed"</span>, toString()), e);</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (log.isInfoEnabled() &amp;&amp; !(<span class="keyword">this</span> <span class="keyword">instanceof</span> Lifecycle.SingleUse)) &#123;</span><br><span class="line">                <span class="comment">// Rather than have every component that might need to call</span></span><br><span class="line">                <span class="comment">// destroy() check for SingleUse, don't log an info message if</span></span><br><span class="line">                <span class="comment">// multiple calls are made to destroy()</span></span><br><span class="line">                log.info(sm.getString(<span class="string">"lifecycleBase.alreadyDestroyed"</span>, toString()));</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (!state.equals(LifecycleState.STOPPED) &amp;&amp;</span><br><span class="line">                !state.equals(LifecycleState.FAILED) &amp;&amp;</span><br><span class="line">                !state.equals(LifecycleState.NEW) &amp;&amp;</span><br><span class="line">                !state.equals(LifecycleState.INITIALIZED)) &#123;</span><br><span class="line">            invalidTransition(Lifecycle.BEFORE_DESTROY_EVENT);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            setStateInternal(LifecycleState.DESTROYING, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">            destroyInternal();</span><br><span class="line">            setStateInternal(LifecycleState.DESTROYED, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">            ExceptionUtils.handleThrowable(t);</span><br><span class="line">            setStateInternal(LifecycleState.FAILED, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> LifecycleException(</span><br><span class="line">                    sm.getString(<span class="string">"lifecycleBase.destroyFail"</span>,toString()), t);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">destroyInternal</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> LifecycleState <span class="title">getState</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> state;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getStateName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> getState().toString();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">setState</span><span class="params">(LifecycleState state)</span></span></span><br><span class="line"><span class="function">            <span class="keyword">throws</span> LifecycleException </span>&#123;</span><br><span class="line">        setStateInternal(state, <span class="keyword">null</span>, <span class="keyword">true</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">setState</span><span class="params">(LifecycleState state, Object data)</span></span></span><br><span class="line"><span class="function">            <span class="keyword">throws</span> LifecycleException </span>&#123;</span><br><span class="line">        setStateInternal(state, data, <span class="keyword">true</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">setStateInternal</span><span class="params">(LifecycleState state,</span></span></span><br><span class="line"><span class="function"><span class="params">            Object data, <span class="keyword">boolean</span> check)</span> <span class="keyword">throws</span> LifecycleException </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (log.isDebugEnabled()) &#123;</span><br><span class="line">            log.debug(sm.getString(<span class="string">"lifecycleBase.setState"</span>, <span class="keyword">this</span>, state));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (check) &#123;</span><br><span class="line">            <span class="comment">// Must have been triggered by one of the abstract methods (assume</span></span><br><span class="line">            <span class="comment">// code in this class is correct)</span></span><br><span class="line">            <span class="comment">// null is never a valid state</span></span><br><span class="line">            <span class="keyword">if</span> (state == <span class="keyword">null</span>) &#123;</span><br><span class="line">                invalidTransition(<span class="string">"null"</span>);</span><br><span class="line">                <span class="comment">// Unreachable code - here to stop eclipse complaining about</span></span><br><span class="line">                <span class="comment">// a possible NPE further down the method</span></span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// Any method can transition to failed</span></span><br><span class="line">            <span class="comment">// startInternal() permits STARTING_PREP to STARTING</span></span><br><span class="line">            <span class="comment">// stopInternal() permits STOPPING_PREP to STOPPING and FAILED to</span></span><br><span class="line">            <span class="comment">// STOPPING</span></span><br><span class="line">            <span class="keyword">if</span> (!(state == LifecycleState.FAILED ||</span><br><span class="line">                    (<span class="keyword">this</span>.state == LifecycleState.STARTING_PREP &amp;&amp;</span><br><span class="line">                            state == LifecycleState.STARTING) ||</span><br><span class="line">                    (<span class="keyword">this</span>.state == LifecycleState.STOPPING_PREP &amp;&amp;</span><br><span class="line">                            state == LifecycleState.STOPPING) ||</span><br><span class="line">                    (<span class="keyword">this</span>.state == LifecycleState.FAILED &amp;&amp;</span><br><span class="line">                            state == LifecycleState.STOPPING))) &#123;</span><br><span class="line">                <span class="comment">// No other transition permitted</span></span><br><span class="line">                invalidTransition(state.name());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">this</span>.state = state;</span><br><span class="line">        String lifecycleEvent = state.getLifecycleEvent();</span><br><span class="line">        <span class="keyword">if</span> (lifecycleEvent != <span class="keyword">null</span>) &#123;</span><br><span class="line">            fireLifecycleEvent(lifecycleEvent, data);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">invalidTransition</span><span class="params">(String type)</span> <span class="keyword">throws</span> LifecycleException </span>&#123;</span><br><span class="line">        String msg = sm.getString(<span class="string">"lifecycleBase.invalidTransition"</span>, type,</span><br><span class="line">                toString(), state);</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> LifecycleException(msg);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>除此之外，我们来看看，tomcat中究竟有多少组件实现了Lifecycle接口：</p>
+<p><img src="/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/lifecycle-arch.jpg" alt=""></p>
+<p>1.LifecycleMBeanBase抽象类继承了LifecycleBase类，实现了javax.management.MBeanRegistration接口，主要是为了将组件注册到MBeanServer上方便通过jmx进行管理。从上图可以看到，基本上tomcat所有的组件都会继承这个类来做管理</p>
+<p>2.Container、Executor、Server、Service接口，继承了Lifecycle接口，同时自己又定义了自己所属类型组件需要的方法接口，例如：</p>
+<p>Server下可以定义多个Service、定义shutdown的port、address、全局的命名空间、上下文、资源等，tomcat都需要对其进行操作，因此会抽象出这些方法，如下图</p>
+<p><img src="/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/server-i.jpg" alt=""></p>
+<p>Service同理，可定义多个connector、container、多个线程池executor、查找父组件Server等</p>
+<p><img src="/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/service-i.jpg" alt=""></p>
+<p>Container定义的接口就比较多了，比较重要的就是对子容器的操作了</p>
+<p><img src="/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/container-i.jpg" alt=""></p>
+<p>ContainerBase实现了Container接口，实现了Container接口中的方法，定义了Map children来存储子容器，作用和LifecycleBase有些类似，这里就不贴代码结构了，其他的如Context、Engine、Host、Wrapper接口都继承子Container接口，且定义了各自需要的一些接口方法，很方便的让具体的实现去扩展。例如：StandardContext既要纳入lifecycle生命周期管理、又要注册jmx、还要具有Container和Context的功能怎么办？</p>
+<p>根据上面的说明，tomcat这种灵活的组件设计，只需要让StandardContext继承ContextBase抽象类，实现Context接口即可。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    Bing Li
+  </li>
+  <li class="post-copyright-created">
+    <strong>发表时间：</strong>
+ 2018-04-08 14:05:56
+  </li>
+  <li class="post-copyright-update">
+    <strong>最后更新：</strong>
+ 2018-04-08 14:05:56
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://bingli-borland.github.io/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/" title="Tomcat源码分析—Lifecycle生命周期">https://bingli-borland.github.io/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/blog/tags/java/" rel="tag"># java</a>
+          
+            <a href="/blog/tags/tomcat/" rel="tag"># tomcat</a>
+          
+            <a href="/blog/tags/server/" rel="tag"># server</a>
+          
+            <a href="/blog/tags/lifecycle/" rel="tag"># lifecycle</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/blog/2018/04/07/Tomcat源码分析—Bootstrap启动与停止/" rel="next" title="Tomcat源码分析—Bootstrap启动和停止">
+                <i class="fa fa-chevron-left"></i> Tomcat源码分析—Bootstrap启动和停止
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/blog/2018/04/24/Tomcat源码分析—配置解析Digester/" rel="prev" title="Tomcat源码分析—配置解析Digester">
+                Tomcat源码分析—配置解析Digester <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      
+        <div id="gitment-container"></div>
+      
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Bing Li</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/blog/archives/">
+              
+                  <span class="site-state-item-count">24</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/blog/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/blog/tags/index.html">
+                  <span class="site-state-item-count">46</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/blog/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          <div class="links-of-author motion-element">
+            
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/bingli-borland" target="_blank" title="GitHub">
+                    
+                      <i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="mailto:1042996632@qq.com" target="_blank" title="E-Mail">
+                    
+                      <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            
+          </div>
+    
+    <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-globe"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                  <li class="links-of-blogroll-item">
+                    <a href="http://jm.taobao.org/" title="阿里中间件博客" target="_blank">阿里中间件博客</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="http://blog.51cto.com/guojuanjun" title="天下无贼" target="_blank">天下无贼</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="https://segmentfault.com/u/wuyangchun" title="Linux����" target="_blank">wuyangchun(Linux)</a>
+                  </li>
+              </ul>
+            </div>
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Lifecycle状态变化"><span class="nav-number">2.</span> <span class="nav-text">Lifecycle状态变化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Lifecycle事件监听机制"><span class="nav-number">3.</span> <span class="nav-text">Lifecycle事件监听机制</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2017 &mdash; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Bing Li</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a></div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/utils.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/motion.js?v=5.1.3"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/affix.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/schemes/pisces.js?v=5.1.3"></script>
+
+
+
+  
+  <script type="text/javascript" src="/blog/js/src/scrollspy.js?v=5.1.3"></script>
+<script type="text/javascript" src="/blog/js/src/post-details.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/bootstrap.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+<!-- LOCAL: You can save these files to your site and update links -->
+    
+        
+        <link rel="stylesheet" href="https://aimingoo.github.io/gitmint/style/default.css">
+        <script src="https://aimingoo.github.io/gitmint/dist/gitmint.browser.js"></script>
+    
+<!-- END LOCAL -->
+
+    
+
+    
+      <script type="text/javascript">
+      function renderGitment(){
+        var gitment = new Gitmint({
+            id: window.location.pathname, 
+            owner: 'bingli-borland',
+            repo: 'blog',
+            
+            lang: "" || navigator.language || navigator.systemLanguage || navigator.userLanguage,
+            
+            oauth: {
+            
+            
+                client_secret: '15d5986f446770cf9d00de45fe9cad58e0e890f3',
+            
+                client_id: '2827532caba6f447f0b0'
+            }});
+        gitment.render('gitment-container');
+      }
+
+      
+      renderGitment();
+      
+      </script>
+    
+
+
+
+
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/blog/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("UDWbbilpB75dbOg2gXfE9jqT-gzGzoHsz", "tdIIS5nlhxM9psPaMOOqtKLe");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

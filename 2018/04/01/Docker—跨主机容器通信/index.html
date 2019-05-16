@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/blog/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/blog/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/blog/css/main.css?v=5.1.3" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/blog/images/apple-touch-icon-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/blog/images/favicon-32x32-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/blog/images/favicon-16x16-next.png?v=5.1.3">
+
+
+  <link rel="mask-icon" href="/blog/images/logo.svg?v=5.1.3" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="docker,network,flannel,wireshark,">
+
+
+
+
+
+  <link rel="alternate" href="/blog/atom.xml" title="技术与生活" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="前言上一篇已经介绍了Docker的四种网络模式，其中bridge模式下容器和主机之间是可以相互通信的，但是如果各个主机之间的容器如何通信呢？Docker跨主机容器间网络通信实现的工具有Pipework、Flannel、Weave、Open vSwitch（虚拟交换机）、Calico实现跨主机容器间的通信。Flannel 是CoreOS 下面的一个项目，目前被使用在 kubernetes 中，用于解">
+<meta name="keywords" content="docker,network,flannel,wireshark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Docker—跨主机容器通信">
+<meta property="og:url" content="https://bingli-borland.github.io/blog/2018/04/01/Docker—跨主机容器通信/index.html">
+<meta property="og:site_name" content="技术与生活">
+<meta property="og:description" content="前言上一篇已经介绍了Docker的四种网络模式，其中bridge模式下容器和主机之间是可以相互通信的，但是如果各个主机之间的容器如何通信呢？Docker跨主机容器间网络通信实现的工具有Pipework、Flannel、Weave、Open vSwitch（虚拟交换机）、Calico实现跨主机容器间的通信。Flannel 是CoreOS 下面的一个项目，目前被使用在 kubernetes 中，用于解">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/04/01/Docker—跨主机容器通信/flannel.png">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/04/01/Docker—跨主机容器通信/decode.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/04/01/Docker—跨主机容器通信/ping.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/04/01/Docker—跨主机容器通信/rq1.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/04/01/Docker—跨主机容器通信/rq2.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/04/01/Docker—跨主机容器通信/rq3.jpg">
+<meta property="og:updated_time" content="2018-04-01T11:14:17.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Docker—跨主机容器通信">
+<meta name="twitter:description" content="前言上一篇已经介绍了Docker的四种网络模式，其中bridge模式下容器和主机之间是可以相互通信的，但是如果各个主机之间的容器如何通信呢？Docker跨主机容器间网络通信实现的工具有Pipework、Flannel、Weave、Open vSwitch（虚拟交换机）、Calico实现跨主机容器间的通信。Flannel 是CoreOS 下面的一个项目，目前被使用在 kubernetes 中，用于解">
+<meta name="twitter:image" content="https://bingli-borland.github.io/blog/2018/04/01/Docker—跨主机容器通信/flannel.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/blog/',
+    scheme: 'Gemini',
+    version: '5.1.3',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://bingli-borland.github.io/blog/2018/04/01/Docker—跨主机容器通信/">
+
+
+
+
+
+  <title>Docker—跨主机容器通信 | 技术与生活</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/blog/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术与生活</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/blog/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/blog/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/blog/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/blog/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/blog/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://bingli-borland.github.io/blog/blog/2018/04/01/Docker—跨主机容器通信/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Bing Li">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/blog/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术与生活">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Docker—跨主机容器通信</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-01T19:14:17+08:00">
+                2018-04-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/blog/categories/docker/" itemprop="url" rel="index">
+                    <span itemprop="name">docker</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/blog/2018/04/01/Docker—跨主机容器通信/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count gitment-comments-count" data-xid="/blog/2018/04/01/Docker—跨主机容器通信/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/blog/2018/04/01/Docker—跨主机容器通信/" class="leancloud_visitors" data-flag-title="Docker—跨主机容器通信">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>上一篇已经介绍了Docker的四种网络模式，其中bridge模式下容器和主机之间是可以相互通信的，但是如果各个主机之间的容器如何通信呢？Docker跨主机容器间网络通信实现的工具有Pipework、Flannel、Weave、Open vSwitch（虚拟交换机）、Calico实现跨主机容器间的通信。<a href="https://github.com/coreos/flannel" target="_blank" rel="noopener">Flannel</a> 是CoreOS 下面的一个项目，目前被使用在 kubernetes 中，用于解决 docker 容器直接跨主机的通信问题。它的主要思路是：<strong>预先留出一个网段，每个主机使用其中一部分，然后每个容器被分配不同的 ip；让所有的容器认为大家在同一个直连的网络，底层通过 UDP/VxLAN 等进行报文的封装和转发</strong>，下面我们来分析一下Flannel是如何使用和基本的原理。</p>
+<a id="more"></a>
+<h3 id="Flannel-使用"><a href="#Flannel-使用" class="headerlink" title="Flannel 使用"></a>Flannel 使用</h3><h4 id="机器环境（centos7系统）"><a href="#机器环境（centos7系统）" class="headerlink" title="机器环境（centos7系统）"></a>机器环境（centos7系统）</h4><table>
+<thead>
+<tr>
+<th>机器</th>
+<th>ip地址</th>
+<th>mac地址</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>k8s-master</td>
+<td>192.168.1.120</td>
+<td>00:0c:29:95:91:54</td>
+<td>部署etcd，flannel，docker</td>
+</tr>
+<tr>
+<td>k8s-node</td>
+<td>192.168.1.121</td>
+<td>00:0c:29:d0:19:51</td>
+<td>部署flannel，docker</td>
+</tr>
+</tbody>
+</table>
+<h4 id="k8s-master机器上操作"><a href="#k8s-master机器上操作" class="headerlink" title="k8s-master机器上操作"></a>k8s-master机器上操作</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 设置主机名以及配置host映射</span></span><br><span class="line">[root@k8s-master ~]# hostnamectl --static set-hostname  k8s-master</span><br><span class="line">[root@k8s-master ~]# vim /etc/hosts</span><br><span class="line">192.168.1.120 k8s-master</span><br><span class="line">192.168.1.120 etcd</span><br><span class="line">192.168.1.121 k8s-node</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 关闭防火墙或者开启防火墙，打开2379和4001端口</span></span><br><span class="line">[root@k8s-master ~]# systemctl disable firewalld.service</span><br><span class="line">[root@k8s-master ~]# systemctl stop firewalld.service</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 安装docker</span></span><br><span class="line">[root@k8s-master ~]# yum install -y docker</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 安装etcd</span></span><br><span class="line">[root@k8s-master ~]# yum install -y etcd</span><br><span class="line"><span class="meta">#</span><span class="bash"> 编辑etcd配置文件，只列出了主要修改的配置</span></span><br><span class="line">[root@k8s-master ~]# cp /etc/etcd/etcd.conf /etc/etcd/etcd.conf.backup</span><br><span class="line">[root@k8s-master ~]# vim /etc/etcd/etcd.conf</span><br><span class="line">ETCD_DATA_DIR="/var/lib/etcd/default.etcd"</span><br><span class="line">ETCD_LISTEN_CLIENT_URLS="http://0.0.0.0:2379,http://0.0.0.0:4001"</span><br><span class="line">ETCD_NAME="master"</span><br><span class="line">ETCD_ADVERTISE_CLIENT_URLS="http://etcd:2379,http://etcd:4001"</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 启动etcd并验证状态</span></span><br><span class="line">[root@k8s-master ~]# systemctl start etcd</span><br><span class="line">[root@k8s-master ~]# ps -ef|grep etcd</span><br><span class="line">etcd       1012      1  0 19:40 ?        00:00:09 /usr/bin/etcd --name=default --data-dir=/var/lib/etcd/default.etcd --listen-client-urls=http://0.0.0.0:2379,http://0.0.0.0:4001</span><br><span class="line">root       1674   1140  0 19:56 pts/0    00:00:00 grep --color=auto etcd</span><br><span class="line">[root@k8s-master ~]# etcdctl -C http://etcd:2379 cluster-health</span><br><span class="line">member 8e9e05c52164694d is healthy: got healthy result from http://etcd:2379</span><br><span class="line">cluster is healthy</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 安装Flannel</span></span><br><span class="line">[root@k8s-master ~]# yum install -y flannel</span><br><span class="line"><span class="meta">#</span><span class="bash"> 配置Flannel</span></span><br><span class="line">[root@k8s-master ~]# cp /etc/sysconfig/flanneld /etc/sysconfig/flanneld.bak</span><br><span class="line">[root@k8s-master ~]# vim /etc/sysconfig/flanneld</span><br><span class="line">FLANNEL_ETCD_ENDPOINTS="http://etcd:2379"</span><br><span class="line">FLANNEL_ETCD_PREFIX="/atomic.io/network"</span><br><span class="line">  </span><br><span class="line"><span class="meta">#</span><span class="bash"> Flannel使用Etcd进行配置，来保证多个Flannel实例之间的配置一致性，所以需要在etcd上进行如下配置（<span class="string">'/atomic.io/network/config'</span></span></span><br><span class="line">这个key与上文/etc/sysconfig/flannel中的配置项FLANNEL_ETCD_PREFIX是相对应的，错误的话启动就会出错）</span><br><span class="line"></span><br><span class="line">[root@k8s-master ~]# etcdctl mk /atomic.io/network/config '&#123; "Network": "182.48.0.0/16" &#125;'</span><br><span class="line">&#123; "Network": "182.48.0.0/16" &#125;</span><br><span class="line"><span class="meta">#</span><span class="bash"> 提示：上面flannel设置的ip网段可以任意设定，随便设定一个网段都可以。容器的ip就是根据这个网段进行自动分配的，ip分配后，容器一般是可以对</span></span><br><span class="line">外联网的（网桥模式，只要宿主机能上网就可以）</span><br><span class="line"> </span><br><span class="line"><span class="meta"> #</span><span class="bash"> 启动Flannel</span></span><br><span class="line">[root@k8s-master ~]# systemctl enable flanneld.service</span><br><span class="line">[root@k8s-master ~]# systemctl start flanneld.service</span><br><span class="line">[root@k8s-master ~]# ps -ef|grep flannel</span><br><span class="line">root       1176      1  0 19:41 ?        00:00:00 /usr/bin/flanneld -etcd-endpoints=http://etcd:2379 -etcd-prefix=/atomic.io/network</span><br><span class="line">root       1787   1140  0 20:05 pts/0    00:00:00 grep --color=auto flannel</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> flannel服务需要先于docker启动。flannel服务启动时主要做了以下几步的工作：</span></span><br><span class="line">从etcd中获取network的配置信息</span><br><span class="line">划分subnet，并在etcd中进行注册</span><br><span class="line">将子网信息记录到/run/flannel/subnet.env中</span><br><span class="line">[root@k8s-master ~]# cat /run/flannel/subnet.env</span><br><span class="line">FLANNEL_NETWORK=182.48.0.0/16</span><br><span class="line">FLANNEL_SUBNET=182.48.64.1/24</span><br><span class="line">FLANNEL_MTU=1472</span><br><span class="line">FLANNEL_IPMASQ=false</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 高版本的flannel会自动将subnet.env转写成一个docker的环境变量文件/run/flannel/docker，低版本的会存在一个mk-docker-opts.sh用来手动转化</span></span><br><span class="line">[root@k8s-master ~]#  cat /run/flannel/docker </span><br><span class="line">DOCKER_OPT_BIP="--bip=182.48.64.1/24"</span><br><span class="line">DOCKER_OPT_IPMASQ="--ip-masq=true"</span><br><span class="line">DOCKER_OPT_MTU="--mtu=1472"</span><br><span class="line">DOCKER_NETWORK_OPTIONS=" --bip=182.48.64.1/24 --ip-masq=true --mtu=1472"</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 配置docker，sysetemctl show docker 将会发现在安装flannel后自动生成配置</span></span><br><span class="line">FragmentPath=/usr/lib/systemd/system/docker.service</span><br><span class="line">DropInPaths=/usr/lib/systemd/system/docker.service.d/flannel.conf</span><br><span class="line">[root@k8s-master ~]# more /usr/lib/systemd/system/docker.service.d/flannel.conf</span><br><span class="line">[Service]</span><br><span class="line">EnvironmentFile=-/run/flannel/docker</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 故在docker的systemd文件中应用对应变量 DOCKER_NETWORK_OPTIONS 即可</span></span><br><span class="line">[root@k8s-master ~]# vim /usr/lib/systemd/system/docker.service</span><br><span class="line">ExecStart=/usr/bin/dockerd $DOCKER_NETWORK_OPTIONS</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 重启docker，这样Flannel配置分配的ip才能生效，即docker0虚拟网卡的ip会变成上面flannel设定的ip段</span></span><br><span class="line">[root@k8s-master ~]# systemctl daemon-reload</span><br><span class="line">[root@k8s-master ~]# systemctl restart docker </span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 查看网卡，docker0已经在设置网段内了，还多了flannel0网卡</span></span><br><span class="line">[root@k8s-master ~]# ifconfig docker0</span><br><span class="line">docker0: flags=4099&lt;UP,BROADCAST,MULTICAST&gt;  mtu 1500</span><br><span class="line">        inet 182.48.64.1  netmask 255.255.255.0  broadcast 182.48.64.255</span><br><span class="line">        ether 02:42:13:39:c7:21  txqueuelen 0  (Ethernet)</span><br><span class="line">        RX packets 0  bytes 0 (0.0 B)</span><br><span class="line">        RX errors 0  dropped 0  overruns 0  frame 0</span><br><span class="line">        TX packets 0  bytes 0 (0.0 B)</span><br><span class="line">        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0</span><br><span class="line">eno16777736: flags=4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu 1500</span><br><span class="line">        inet 192.168.1.120  netmask 255.255.255.0  broadcast 192.168.1.255</span><br><span class="line">        inet6 fe80::689b:8360:5fff:6fb1  prefixlen 64  scopeid 0x20&lt;link&gt;</span><br><span class="line">        ether 00:0c:29:95:91:54  txqueuelen 1000  (Ethernet)</span><br><span class="line">        RX packets 2296  bytes 183463 (179.1 KiB)</span><br><span class="line">        RX errors 0  dropped 0  overruns 0  frame 0</span><br><span class="line">        TX packets 1778  bytes 212378 (207.4 KiB)</span><br><span class="line">        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0</span><br><span class="line"></span><br><span class="line">flannel0: flags=4305&lt;UP,POINTOPOINT,RUNNING,NOARP,MULTICAST&gt;  mtu 1472</span><br><span class="line">        inet 182.48.64.0  netmask 255.255.0.0  destination 182.48.64.0</span><br><span class="line">        inet6 fe80::3b7c:2c82:e03e:b230  prefixlen 64  scopeid 0x20&lt;link&gt;</span><br><span class="line">        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 500  (UNSPEC)</span><br><span class="line">        RX packets 0  bytes 0 (0.0 B)</span><br><span class="line">        RX errors 0  dropped 0  overruns 0  frame 0</span><br><span class="line">        TX packets 3  bytes 144 (144.0 B)</span><br><span class="line">        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0</span><br><span class="line"></span><br><span class="line">lo: flags=73&lt;UP,LOOPBACK,RUNNING&gt;  mtu 65536</span><br><span class="line">        inet 127.0.0.1  netmask 255.0.0.0</span><br><span class="line">        inet6 ::1  prefixlen 128  scopeid 0x10&lt;host&gt;</span><br><span class="line">        loop  txqueuelen 1  (Local Loopback)</span><br><span class="line">        RX packets 2493  bytes 143991 (140.6 KiB)</span><br><span class="line">        RX errors 0  dropped 0  overruns 0  frame 0</span><br><span class="line">        TX packets 2493  bytes 143991 (140.6 KiB)</span><br><span class="line">        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 启动一个容器，查看容器ip是否在我们设置的网段内</span></span><br><span class="line">[root@k8s-master ~]# docker run -it centos /bin/bash</span><br><span class="line">[root@b89c9bc580d5 /]# more /etc/hosts</span><br><span class="line">127.0.0.1       localhost</span><br><span class="line">::1     localhost ip6-localhost ip6-loopback</span><br><span class="line">fe00::0 ip6-localnet</span><br><span class="line">ff00::0 ip6-mcastprefix</span><br><span class="line">ff02::1 ip6-allnodes</span><br><span class="line">ff02::2 ip6-allrouters</span><br><span class="line">182.48.64.2     b89c9bc580d5</span><br></pre></td></tr></table></figure>
+<h4 id="k8s-node机器上操作"><a href="#k8s-node机器上操作" class="headerlink" title="k8s-node机器上操作"></a>k8s-node机器上操作</h4><p>为了操作下低版本flannel的安装，这里选择安装flannel-0.4.0，可在github上下载</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 解压</span></span><br><span class="line">[root@k8s-node Downloads]# tar -zxvf flannel-0.4.0-linux-amd64.tar.gz</span><br><span class="line"><span class="meta">#</span><span class="bash"> 进入解压目录</span></span><br><span class="line">[root@k8s-node flannel-0.4.0]# ll</span><br><span class="line">-rwxrwxrwx. 1 bes  bes  8903712 Apr 25  2015 flanneld</span><br><span class="line">-rw-rw-r--. 1 bes  bes     1799 Apr 25  2015 mk-docker-opts.sh</span><br><span class="line">-rw-rw-r--. 1 bes  bes     7374 Apr 25  2015 README.md</span><br><span class="line"><span class="meta">#</span><span class="bash"> 启动和配置与yum安装的flannel有所不同，查看<span class="built_in">help</span>信息可知需要在命令后直接加参数</span></span><br><span class="line">[root@k8s-node flannel-0.4.0]# ./flanneld --help</span><br><span class="line">Usage: ./flanneld [OPTION]...</span><br><span class="line">  -alsologtostderr=false: log to standard error as well as files</span><br><span class="line">  -etcd-cafile="": SSL Certificate Authority file used to secure etcd communication</span><br><span class="line">  -etcd-certfile="": SSL certification file used to secure etcd communication</span><br><span class="line">  -etcd-endpoints="http://127.0.0.1:4001,http://127.0.0.1:2379": a comma-delimited list of etcd endpoints</span><br><span class="line">  -etcd-keyfile="": SSL key file used to secure etcd communication</span><br><span class="line">  -etcd-prefix="/coreos.com/network": etcd prefix</span><br><span class="line">  -help=false: print this message</span><br><span class="line">  -iface="": interface to use (IP or name) for inter-host communication</span><br><span class="line">  -ip-masq=false: setup IP masquerade rule for traffic destined outside of overlay network</span><br><span class="line">  -log_backtrace_at=:0: when logging hits line file:N, emit a stack trace</span><br><span class="line">  -log_dir="": If non-empty, write log files in this directory</span><br><span class="line">  -logtostderr=false: log to standard error instead of files</span><br><span class="line">  -stderrthreshold=0: logs at or above this threshold go to stderr</span><br><span class="line">  -subnet-file="/run/flannel/subnet.env": filename where env variables (subnet and MTU values) will be written to</span><br><span class="line">  -v=0: log level for V logs</span><br><span class="line">  -version=false: print version and exit</span><br><span class="line">  -vmodule=: comma-separated list of pattern=N settings for file-filtered logging</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 启动flannel</span></span><br><span class="line">[root@k8s-node flannel-0.4.0]# ./flanneld -etcd-endpoints="http://etcd:2379" -etcd-prefix="/atomic.io/network" -subnet-file="/run/flannel/subnet.env" &amp;</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 将subnet.env转写成一个docker的环境变量文件/run/flannel/docker</span></span><br><span class="line">[root@k8s-node flannel-0.4.0]# sh mk-docker-opts.sh -f /run/flannel/subnet.env  -d /run/flannel/docker</span><br><span class="line">[root@k8s-node flannel-0.4.0]# more /run/flannel/docker</span><br><span class="line">DOCKER_OPT_BIP="--bip=182.48.55.1/24"</span><br><span class="line">DOCKER_OPT_MTU="--mtu=1472"</span><br><span class="line">DOCKER_OPTS=" --bip=182.48.55.1/24 --mtu=1472 "</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 安装docker</span></span><br><span class="line">[root@k8s-node ~]#  yum install -y docker</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 在docker的systemd文件中应用docker环境变量文件并设置对应变量参数</span></span><br><span class="line">[root@k8s-node ~]# vim /usr/lib/systemd/system/docker.service</span><br><span class="line">EnvironmentFile=-/run/flannel/docker</span><br><span class="line">ExecStart=/usr/bin/dockerd $DOCKER_OPTS</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 重启docker，这样Flannel配置分配的ip才能生效，即docker0虚拟网卡的ip会变成上面flannel设定的ip段</span></span><br><span class="line">[root@k8s-node ~]# systemctl daemon-reload</span><br><span class="line">[root@k8s-node ~]# systemctl restart docker </span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 查看网卡，docker0已经在设置网段内了，还多了flannel0网卡</span></span><br><span class="line">[root@k8s-node ~]# ifconfig</span><br><span class="line">docker0: flags=4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu 1500</span><br><span class="line">        inet 182.48.55.1  netmask 255.255.255.0  broadcast 182.48.55.255</span><br><span class="line">        inet6 fe80::42:96ff:fe1b:525b  prefixlen 64  scopeid 0x20&lt;link&gt;</span><br><span class="line">        ether 02:42:96:1b:52:5b  txqueuelen 0  (Ethernet)</span><br><span class="line">        RX packets 0  bytes 0 (0.0 B)</span><br><span class="line">        RX errors 0  dropped 0  overruns 0  frame 0</span><br><span class="line">        TX packets 16  bytes 1986 (1.9 KiB)</span><br><span class="line">        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0</span><br><span class="line"></span><br><span class="line">ens33: flags=4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu 1500</span><br><span class="line">        inet 192.168.1.121  netmask 255.255.255.0  broadcast 192.168.1.255</span><br><span class="line">        inet6 fe80::7546:20aa:b1ae:a8da  prefixlen 64  scopeid 0x20&lt;link&gt;</span><br><span class="line">        ether 00:0c:29:d0:19:51  txqueuelen 1000  (Ethernet)</span><br><span class="line">        RX packets 3282  bytes 258756 (252.6 KiB)</span><br><span class="line">        RX errors 0  dropped 0  overruns 0  frame 0</span><br><span class="line">        TX packets 2550  bytes 219742 (214.5 KiB)</span><br><span class="line">        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0</span><br><span class="line"></span><br><span class="line">flannel0: flags=81&lt;UP,POINTOPOINT,RUNNING&gt;  mtu 1472</span><br><span class="line">        inet 182.48.55.0  netmask 255.255.0.0  destination 182.48.55.0</span><br><span class="line">        inet6 fe80::6b0:1535:87f7:e599  prefixlen 64  scopeid 0x20&lt;link&gt;</span><br><span class="line">        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 500  (UNSPEC)</span><br><span class="line">        RX packets 0  bytes 0 (0.0 B)</span><br><span class="line">        RX errors 0  dropped 0  overruns 0  frame 0</span><br><span class="line">        TX packets 7  bytes 448 (448.0 B)</span><br><span class="line">        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0</span><br><span class="line"></span><br><span class="line">lo: flags=73&lt;UP,LOOPBACK,RUNNING&gt;  mtu 65536</span><br><span class="line">        inet 127.0.0.1  netmask 255.0.0.0</span><br><span class="line">        inet6 ::1  prefixlen 128  scopeid 0x10&lt;host&gt;</span><br><span class="line">        loop  txqueuelen 1  (Local Loopback)</span><br><span class="line">        RX packets 0  bytes 0 (0.0 B)</span><br><span class="line">        RX errors 0  dropped 0  overruns 0  frame 0</span><br><span class="line">        TX packets 0  bytes 0 (0.0 B)</span><br><span class="line">        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0</span><br><span class="line"> </span><br><span class="line"><span class="meta">#</span><span class="bash"> 启动一个容器，查看容器ip是否在我们设置的网段内</span></span><br><span class="line">[root@k8s-node ~]# docker run -it centos /bin/bash</span><br><span class="line">[root@32dbc0d0ff72 /]# more /etc/hosts</span><br><span class="line">127.0.0.1       localhost</span><br><span class="line">::1     localhost ip6-localhost ip6-loopback</span><br><span class="line">fe00::0 ip6-localnet</span><br><span class="line">ff00::0 ip6-mcastprefix</span><br><span class="line">ff02::1 ip6-allnodes</span><br><span class="line">ff02::2 ip6-allrouters</span><br><span class="line">182.48.55.2     32dbc0d0ff72</span><br></pre></td></tr></table></figure>
+<p>相信看到这里应该知道为什么docker容器的ip会在我们设置ip段内了，其实只是用了docker自身的特性，这里面的“–bip=182.48.64.1/24”这个参数，它限制了所在节点容器获得的IP范围。执行如下命令</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@k8s-master ~]# ps -ef|grep docker</span><br><span class="line">root       1357      1  0 19:41 ?        00:00:11 /usr/bin/dockerd --bip=182.48.64.1/24 --ip-masq=true --mtu=1472</span><br></pre></td></tr></table></figure>
+<h4 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h4><p>在上面的操作之后，两台机器容器、主机之间都是可以ping通过的，那么数据流程是如何？在Flannel的GitHub页面有如下的一张原理图，默认的节点间数据通信方式是UDP转发:</p>
+<p><img src="/blog/2018/04/01/Docker—跨主机容器通信/flannel.png" alt=""></p>
+<p>那么一条网络报文是怎么从一个容器发送到另外一个容器的呢？</p>
+<ol>
+<li>容器直接使用目标容器的 ip 访问，默认通过容器内部的 eth0 发送出去</li>
+<li>报文通过 veth pair 被发送到 vethXXX</li>
+<li>vethXXX 是直接连接到虚拟交换机 docker0 的，报文通过虚拟 bridge docker0 发送出去</li>
+<li>查找路由表，外部容器 ip 的报文都会转发到 flannel0 虚拟网卡，这是一个 P2P 的虚拟网卡（参考有关linux 有关tun/tap设备的知识），然后报文就被转发到监听在另一端的 flanneld</li>
+<li>flanneld 通过 etcd 维护了各个节点之间的路由表，把原来的报文 UDP 封装一层，通过配置的 <code>iface</code> 发送出去</li>
+<li>报文通过主机之间的网络找到目标主机</li>
+<li>报文继续往上，到传输层，交给监听在 8285 端口的 flanneld 程序处理</li>
+<li>数据被解包，然后发送给 flannel0 虚拟网卡</li>
+<li>查找路由表，发现对应容器的报文要交给 docker0</li>
+<li>docker0 找到连到自己的容器，把报文发送过去</li>
+</ol>
+<p>通过上图可以看出，数据封装号之后肯定会经过主机的eth0网卡，我们tcpdump抓ping包分析下结构：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 182.48.55.2(192.168.1.121)   ping   182.48.64.2(192.168.1.120) flannel默认监听8525端口</span></span><br><span class="line">[root@k8s-node ~]# tcpdump -i ens33 udp -w /home/bes/ping.pcap</span><br><span class="line">tcpdump: listening on ens33, link-type EN10MB (Ethernet), capture size 262144 bytes</span><br><span class="line">33 packets captured</span><br><span class="line">33 packets received by filter</span><br><span class="line">0 packets dropped by kernel</span><br><span class="line">[root@k8s-node ~]#</span><br></pre></td></tr></table></figure>
+<p>在 wireshark 中看一下封装的报文，这个地方折腾了好久，一开始封装的报文是看不到的，全是UDP的DATA数据，需要使用wireshark 的 <code>decode as</code> 功能把被封装的报文显示出来。可以看到主机间是在 UDP 8285 端口通信的，报文中包含了容器间真正的网络报文，比如这里的 ping 包（ICMP 协议报文）。</p>
+<p><img src="/blog/2018/04/01/Docker—跨主机容器通信/decode.jpg" alt=""></p>
+<p><img src="/blog/2018/04/01/Docker—跨主机容器通信/ping.jpg" alt=""></p>
+<p>182.48.55.2(192.168.1.121) 访问182.48.64.2(192.168.1.120) 上的nginx，http协议的报文：</p>
+<p><img src="/blog/2018/04/01/Docker—跨主机容器通信/rq1.jpg" alt=""></p>
+<p><img src="/blog/2018/04/01/Docker—跨主机容器通信/rq2.jpg" alt=""></p>
+<p><img src="/blog/2018/04/01/Docker—跨主机容器通信/rq3.jpg" alt=""></p>
+<h4 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h4><p>通过查看flannel的文档，上面我们设置给etcd的信息：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">      <span class="attr">"Network"</span>: <span class="string">"182.48.0.0/16"</span>,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个只是规定了容器的网段，其实还有个Backend：Type属性设置，默认是udp，也就是上面的情况，此时flanneld进程监听的8285端口，其实还支持vxLan等类型，当type=vxLan时，flanneld监听8472端口，配置如下：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">      <span class="attr">"Network"</span>: <span class="string">"182.48.0.0/16"</span>,</span><br><span class="line">      <span class="attr">"Backend"</span>: &#123;</span><br><span class="line">      	<span class="attr">"Type"</span>: <span class="string">"vxlan"</span></span><br><span class="line">      &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>封装数据包时就使用了vxLan协议，通过抓包可以查看到，这里不再详细描述，k8s中flannel就是配置的vxLan协议。</p>
+<h3 id="路由机制实现容器跨主机通信"><a href="#路由机制实现容器跨主机通信" class="headerlink" title="路由机制实现容器跨主机通信"></a>路由机制实现容器跨主机通信</h3><p>环境：</p>
+<ul>
+<li>CentOS Linux release 7.1.1503 (Core)    docker-17.05.0-ce</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">card</th>
+<th style="text-align:left">ip</th>
+<th style="text-align:left">mac</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">docker0</td>
+<td style="text-align:left">172.18.0.1</td>
+<td style="text-align:left">02:42:3d:b9:63:0a</td>
+</tr>
+<tr>
+<td style="text-align:left">ens33</td>
+<td style="text-align:left">192.168.1.50</td>
+<td style="text-align:left">00:50:56:3a:64:16</td>
+</tr>
+<tr>
+<td style="text-align:left">root@600c3ecac1c5</td>
+<td style="text-align:left">172.18.0.2</td>
+<td style="text-align:left">02:42:ac:12:00:02</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Ubuntu 14.04.5 LTS  docker-18.03.0-ce</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>card</th>
+<th>ip</th>
+<th>mac</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>docker0</td>
+<td>172.17.42.1</td>
+<td>02:42:63:9a:68:5c</td>
+</tr>
+<tr>
+<td>eth0</td>
+<td>192.168.1.48</td>
+<td>00:0c:29:3d:8f:81</td>
+</tr>
+<tr>
+<td>root@9e3037bff56f</td>
+<td>172.17.0.1</td>
+<td>02:42:ac:11:00:01</td>
+</tr>
+</tbody>
+</table>
+<p>当前这个环境在600c3ecac1c5容器中ping 9e3037bff56f容器肯定无法ping通，因为数据到了docker0之后，查询路由表，并不知道172.17.0.1在哪儿？这时可以增加路由信息</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> cenos 所有数据包目的地址为172.17.0.0/16都找网关192.168.1.48去</span></span><br><span class="line">route add -net 172.17.0.0/16 gw 192.168.1.48</span><br><span class="line"><span class="meta">#</span><span class="bash"> ubuntu 所有数据包目的地址为172.18.0.0/16都找网关192.168.1.50去</span></span><br><span class="line">route add -net 172.18.0.0/16 gw 192.168.1.50</span><br></pre></td></tr></table></figure>
+<p>再次ping 172.17.0.1，结果是ok的：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[root@600c3ecac1c5 /]# ping 172.17.0.1</span><br><span class="line">PING 172.17.0.1 (172.17.0.1) 56(84) bytes of data.</span><br><span class="line">64 bytes from 172.17.0.1: icmp_seq=1 ttl=62 time=0.396 ms</span><br><span class="line">64 bytes from 172.17.0.1: icmp_seq=2 ttl=62 time=0.815 ms</span><br></pre></td></tr></table></figure>
+<p>centos机器抓包-docker0网卡数据：</p>
+<p>第一条报文里源ip和mac地址是对应的，172.18.0.2和02:42:ac:12:00:02，但是查看上述环境，目的ip和mac地址就不对应了，172.17.0.1和02:42:3d:b9:63:0a，原因是容器里是一个二层网络，172.17.0.1和自己不在一个网络内，所以将数据发给Docker0网关，因此mac地址是docker0的地址。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@etcd bes]# tshark -i docker0  -e ip.src -e eth.src -e ip.dst -e eth.dst -T fields -E separator=, -f icmp</span><br><span class="line">Running as user "root" and group "root". This could be dangerous.</span><br><span class="line">Capturing on 'docker0'</span><br><span class="line">172.18.0.2,02:42:ac:12:00:02,172.17.0.1,02:42:3d:b9:63:0a</span><br><span class="line">172.17.0.1,02:42:3d:b9:63:0a,172.18.0.2,02:42:ac:12:00:02</span><br><span class="line">172.18.0.2,02:42:ac:12:00:02,172.17.0.1,02:42:3d:b9:63:0a</span><br><span class="line">172.17.0.1,02:42:3d:b9:63:0a,172.18.0.2,02:42:ac:12:00:02</span><br></pre></td></tr></table></figure>
+<p>centos机器抓包-ens33网卡数据：</p>
+<p>docker0接收到数据包之后，经过路由计算，这个报文被发往下一跳的路由接口是ens33，因此看第一条报文，源ip地址172.18.0.2对应的mac地址改成了ens33网卡的mac地址，而目的ip地址172.17.0.1的mac地址是另一台主机物理网卡eth0的mac地址。这就是我们增加的那条路由信息的作用。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@etcd bes]# tshark -i ens33  -e ip.src -e eth.src -e ip.dst -e eth.dst -T fields -E separator=, -f icmp</span><br><span class="line">Running as user "root" and group "root". This could be dangerous.</span><br><span class="line">Capturing on 'ens33'</span><br><span class="line">172.18.0.2,00:50:56:3a:64:16,172.17.0.1,00:0c:29:3d:8f:81</span><br><span class="line">172.17.0.1,00:0c:29:3d:8f:81,172.18.0.2,00:50:56:3a:64:16</span><br><span class="line">172.18.0.2,00:50:56:3a:64:16,172.17.0.1,00:0c:29:3d:8f:81</span><br><span class="line">172.17.0.1,00:0c:29:3d:8f:81,172.18.0.2,00:50:56:3a:64:16</span><br></pre></td></tr></table></figure>
+<p>ubuntu机器抓包-eth0网卡数据：</p>
+<p>eth0网卡接收到报文后，经过路由计算，发给下一跳路由接口docker0</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">root@ubuntu:/home/bes# tshark -i eth0  -e ip.src -e eth.src -e ip.dst -e eth.dst -T fields -E separator=, -f icmp</span><br><span class="line">Running as user "root" and group "root". This could be dangerous.</span><br><span class="line">Capturing on 'eth0'</span><br><span class="line">172.18.0.2,00:50:56:3a:64:16,172.17.0.1,00:0c:29:3d:8f:81</span><br><span class="line">172.17.0.1,00:0c:29:3d:8f:81,172.18.0.2,00:50:56:3a:64:16</span><br><span class="line">172.18.0.2,00:50:56:3a:64:16,172.17.0.1,00:0c:29:3d:8f:81</span><br><span class="line">172.17.0.1,00:0c:29:3d:8f:81,172.18.0.2,00:50:56:3a:64:16</span><br></pre></td></tr></table></figure>
+<p>ubuntu机器抓包-docker0网卡数据：</p>
+<p>从第一条报文看出，源ip 172.18.0.2对应的mac地址变成了docker0的mac地址，目的ip 172.17.0.1的mac变成了容器内网卡eth0的mac地址，这样ping的请求到达容器内，然后ping返回信息，分析过程和上面的类似。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">root@ubuntu:/home/bes# tshark -i docker0  -e ip.src -e eth.src -e ip.dst -e eth.dst -T fields -E separator=, -f icmp</span><br><span class="line">Running as user "root" and group "root". This could be dangerous.</span><br><span class="line">Capturing on 'docker0'</span><br><span class="line">172.18.0.2,02:42:63:9a:68:5c,172.17.0.1,02:42:ac:11:00:01</span><br><span class="line">172.17.0.1,02:42:ac:11:00:01,172.18.0.2,02:42:63:9a:68:5c</span><br><span class="line">172.18.0.2,02:42:63:9a:68:5c,172.17.0.1,02:42:ac:11:00:01</span><br><span class="line">172.17.0.1,02:42:ac:11:00:01,172.18.0.2,02:42:63:9a:68:5c</span><br></pre></td></tr></table></figure>
+<p>实际上Calico实现跨主机容器间的通信就是通过这种路由机制，相比Flannel，优点就是不用封包拆包，效率比较高。</p>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p>1.<a href="https://blog.csdn.net/liukuan73/article/details/54897594" target="_blank" rel="noopener">Docker 配置Flannel网络过程及原理</a></p>
+<p>2.<a href="http://www.cnblogs.com/kevingrace/p/6859114.html" target="_blank" rel="noopener">Docker网络解决方案-Flannel部署记录</a></p>
+<p>3.<a href="http://cizixs.com/2016/06/15/flannel-overlay-network" target="_blank" rel="noopener">flannel 网络模型</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    Bing Li
+  </li>
+  <li class="post-copyright-created">
+    <strong>发表时间：</strong>
+ 2018-04-01 19:14:17
+  </li>
+  <li class="post-copyright-update">
+    <strong>最后更新：</strong>
+ 2018-04-01 19:14:17
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://bingli-borland.github.io/blog/2018/04/01/Docker—跨主机容器通信/" title="Docker—跨主机容器通信">https://bingli-borland.github.io/blog/2018/04/01/Docker—跨主机容器通信/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/blog/tags/docker/" rel="tag"># docker</a>
+          
+            <a href="/blog/tags/network/" rel="tag"># network</a>
+          
+            <a href="/blog/tags/flannel/" rel="tag"># flannel</a>
+          
+            <a href="/blog/tags/wireshark/" rel="tag"># wireshark</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/blog/2018/03/28/Docker—网络模式/" rel="next" title="Docker—网络模式">
+                <i class="fa fa-chevron-left"></i> Docker—网络模式
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/blog/2018/04/07/Tomcat源码分析—Bootstrap启动与停止/" rel="prev" title="Tomcat源码分析—Bootstrap启动和停止">
+                Tomcat源码分析—Bootstrap启动和停止 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      
+        <div id="gitment-container"></div>
+      
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Bing Li</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/blog/archives/">
+              
+                  <span class="site-state-item-count">24</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/blog/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/blog/tags/index.html">
+                  <span class="site-state-item-count">46</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/blog/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          <div class="links-of-author motion-element">
+            
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/bingli-borland" target="_blank" title="GitHub">
+                    
+                      <i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="mailto:1042996632@qq.com" target="_blank" title="E-Mail">
+                    
+                      <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            
+          </div>
+    
+    <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-globe"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                  <li class="links-of-blogroll-item">
+                    <a href="http://jm.taobao.org/" title="阿里中间件博客" target="_blank">阿里中间件博客</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="http://blog.51cto.com/guojuanjun" title="天下无贼" target="_blank">天下无贼</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="https://segmentfault.com/u/wuyangchun" title="Linux����" target="_blank">wuyangchun(Linux)</a>
+                  </li>
+              </ul>
+            </div>
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Flannel-使用"><span class="nav-number">2.</span> <span class="nav-text">Flannel 使用</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#机器环境（centos7系统）"><span class="nav-number">2.1.</span> <span class="nav-text">机器环境（centos7系统）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#k8s-master机器上操作"><span class="nav-number">2.2.</span> <span class="nav-text">k8s-master机器上操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#k8s-node机器上操作"><span class="nav-number">2.3.</span> <span class="nav-text">k8s-node机器上操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#分析"><span class="nav-number">2.4.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#其他"><span class="nav-number">2.5.</span> <span class="nav-text">其他</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#路由机制实现容器跨主机通信"><span class="nav-number">3.</span> <span class="nav-text">路由机制实现容器跨主机通信</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2017 &mdash; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Bing Li</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a></div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/utils.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/motion.js?v=5.1.3"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/affix.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/schemes/pisces.js?v=5.1.3"></script>
+
+
+
+  
+  <script type="text/javascript" src="/blog/js/src/scrollspy.js?v=5.1.3"></script>
+<script type="text/javascript" src="/blog/js/src/post-details.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/bootstrap.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+<!-- LOCAL: You can save these files to your site and update links -->
+    
+        
+        <link rel="stylesheet" href="https://aimingoo.github.io/gitmint/style/default.css">
+        <script src="https://aimingoo.github.io/gitmint/dist/gitmint.browser.js"></script>
+    
+<!-- END LOCAL -->
+
+    
+
+    
+      <script type="text/javascript">
+      function renderGitment(){
+        var gitment = new Gitmint({
+            id: window.location.pathname, 
+            owner: 'bingli-borland',
+            repo: 'blog',
+            
+            lang: "" || navigator.language || navigator.systemLanguage || navigator.userLanguage,
+            
+            oauth: {
+            
+            
+                client_secret: '15d5986f446770cf9d00de45fe9cad58e0e890f3',
+            
+                client_id: '2827532caba6f447f0b0'
+            }});
+        gitment.render('gitment-container');
+      }
+
+      
+      renderGitment();
+      
+      </script>
+    
+
+
+
+
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/blog/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("UDWbbilpB75dbOg2gXfE9jqT-gzGzoHsz", "tdIIS5nlhxM9psPaMOOqtKLe");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

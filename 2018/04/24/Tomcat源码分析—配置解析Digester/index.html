@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/blog/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/blog/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/blog/css/main.css?v=5.1.3" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/blog/images/apple-touch-icon-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/blog/images/favicon-32x32-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/blog/images/favicon-16x16-next.png?v=5.1.3">
+
+
+  <link rel="mask-icon" href="/blog/images/logo.svg?v=5.1.3" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="java,tomcat,digester,server.xml,">
+
+
+
+
+
+  <link rel="alternate" href="/blog/atom.xml" title="技术与生活" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="前言这两周比较忙，没有更新博客，有点偷懒了，不废话，本篇继续分析tomcat源码，再bootstrap那一篇Catalina.load方法中已经提到过，tomcat配置文件server.xml的解析是通过Digester，Digester源码已纳入tomcat源码中，也可以在apache的官网上下载到二进制文件和源码。首先我们来看一个简单的demo，然后具体分析下Digester的具体使用以及在t">
+<meta name="keywords" content="java,tomcat,digester,server.xml">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tomcat源码分析—配置解析Digester">
+<meta property="og:url" content="https://bingli-borland.github.io/blog/2018/04/24/Tomcat源码分析—配置解析Digester/index.html">
+<meta property="og:site_name" content="技术与生活">
+<meta property="og:description" content="前言这两周比较忙，没有更新博客，有点偷懒了，不废话，本篇继续分析tomcat源码，再bootstrap那一篇Catalina.load方法中已经提到过，tomcat配置文件server.xml的解析是通过Digester，Digester源码已纳入tomcat源码中，也可以在apache的官网上下载到二进制文件和源码。首先我们来看一个简单的demo，然后具体分析下Digester的具体使用以及在t">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-04-24T06:31:56.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tomcat源码分析—配置解析Digester">
+<meta name="twitter:description" content="前言这两周比较忙，没有更新博客，有点偷懒了，不废话，本篇继续分析tomcat源码，再bootstrap那一篇Catalina.load方法中已经提到过，tomcat配置文件server.xml的解析是通过Digester，Digester源码已纳入tomcat源码中，也可以在apache的官网上下载到二进制文件和源码。首先我们来看一个简单的demo，然后具体分析下Digester的具体使用以及在t">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/blog/',
+    scheme: 'Gemini',
+    version: '5.1.3',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://bingli-borland.github.io/blog/2018/04/24/Tomcat源码分析—配置解析Digester/">
+
+
+
+
+
+  <title>Tomcat源码分析—配置解析Digester | 技术与生活</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/blog/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术与生活</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/blog/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/blog/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/blog/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/blog/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/blog/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://bingli-borland.github.io/blog/blog/2018/04/24/Tomcat源码分析—配置解析Digester/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Bing Li">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/blog/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术与生活">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Tomcat源码分析—配置解析Digester</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-24T14:31:56+08:00">
+                2018-04-24
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/blog/categories/tomcat/" itemprop="url" rel="index">
+                    <span itemprop="name">tomcat</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/blog/2018/04/24/Tomcat源码分析—配置解析Digester/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count gitment-comments-count" data-xid="/blog/2018/04/24/Tomcat源码分析—配置解析Digester/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/blog/2018/04/24/Tomcat源码分析—配置解析Digester/" class="leancloud_visitors" data-flag-title="Tomcat源码分析—配置解析Digester">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>这两周比较忙，没有更新博客，有点偷懒了，不废话，本篇继续分析tomcat源码，再bootstrap那一篇Catalina.load方法中已经提到过，tomcat配置文件server.xml的解析是通过Digester，Digester源码已纳入tomcat源码中，也可以在apache的<a href="http://commons.apache.org/proper/commons-digester/" target="_blank" rel="noopener">官网</a>上下载到二进制文件和源码。首先我们来看一个简单的demo，然后具体分析下Digester的具体使用以及在tomcat中的使用。</p>
+<h3 id="Digester解析案例"><a href="#Digester解析案例" class="headerlink" title="Digester解析案例"></a>Digester解析案例</h3><p>这个案例中，我们主要做的就是将xml中定义的element解析为对应的Java对象并打印一些信息。xml文件定义，employee.xml如下：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;?xml version="1.0" encoding="UTF-8"?&gt; </span><br><span class="line"><span class="tag">&lt;<span class="name">employee</span> <span class="attr">firstName</span>=<span class="string">"Brian"</span> <span class="attr">lastName</span>=<span class="string">"May"</span>&gt;</span> </span><br><span class="line">   <span class="tag">&lt;<span class="name">office</span>&gt;</span> </span><br><span class="line">     <span class="tag">&lt;<span class="name">address</span> <span class="attr">streeName</span>=<span class="string">"Wellington Street"</span> <span class="attr">streetNumber</span>=<span class="string">"110"</span>/&gt;</span> </span><br><span class="line">   <span class="tag">&lt;/<span class="name">office</span>&gt;</span> </span><br><span class="line"><span class="tag">&lt;/<span class="name">employee</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<a id="more"></a>
+<p>java类定义，Employee.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.bingli.digester.test;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.ArrayList;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Employee</span> </span>&#123;</span><br><span class="line">	<span class="keyword">private</span> String firstName;</span><br><span class="line">	<span class="keyword">private</span> String lastName;</span><br><span class="line">	<span class="keyword">private</span> ArrayList offices = <span class="keyword">new</span> ArrayList();</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">Employee</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"Creating Employee"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> String <span class="title">getFirstName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> firstName;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setFirstName</span><span class="params">(String firstName)</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"Setting firstName : "</span> + firstName);</span><br><span class="line">		<span class="keyword">this</span>.firstName = firstName;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> String <span class="title">getLastName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> lastName;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setLastName</span><span class="params">(String lastName)</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"Setting lastName : "</span> + lastName);</span><br><span class="line">		<span class="keyword">this</span>.lastName = lastName;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addOffice</span><span class="params">(Office office)</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"Adding Office to this employee"</span>);</span><br><span class="line">		offices.add(office);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> ArrayList <span class="title">getOffices</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> offices;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">printName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"My name is "</span> + firstName + <span class="string">" "</span> + lastName);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Office.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.bingli.digester.test;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Office</span> </span>&#123;</span><br><span class="line">	<span class="keyword">private</span> Address address;</span><br><span class="line">	<span class="keyword">private</span> String description;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">Office</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"..Creating Office"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> String <span class="title">getDescription</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> description;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setDescription</span><span class="params">(String description)</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"..Setting office description : "</span> + description);</span><br><span class="line">		<span class="keyword">this</span>.description = description;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> Address <span class="title">getAddress</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> address;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setAddress</span><span class="params">(Address address)</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"..Setting office address : "</span> + address);</span><br><span class="line">		<span class="keyword">this</span>.address = address;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Address.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.bingli.digester.test;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Address</span> </span>&#123;</span><br><span class="line">	<span class="keyword">private</span> String streetName;</span><br><span class="line">	<span class="keyword">private</span> String streetNumber;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">Address</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"....Creating Address"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> String <span class="title">getStreetName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> streetName;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setStreetName</span><span class="params">(String streetName)</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"....Setting streetName : "</span> + streetName);</span><br><span class="line">		<span class="keyword">this</span>.streetName = streetName;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> String <span class="title">getStreetNumber</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> streetNumber;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setStreetNumber</span><span class="params">(String streetNumber)</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"....Setting streetNumber : "</span> + streetNumber);</span><br><span class="line">		<span class="keyword">this</span>.streetNumber = streetNumber;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> String <span class="title">toString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="string">"...."</span> + streetNumber + <span class="string">" "</span> + streetName;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Test01.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.bingli.digester.test;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.io.File;</span><br><span class="line"><span class="keyword">import</span> org.apache.tomcat.util.digester.Digester;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test01</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 配置需要解析的xml文件</span></span><br><span class="line">        String path = System.getProperty(<span class="string">"user.dir"</span>) + File.separator + <span class="string">"src"</span>;</span><br><span class="line">        File file = <span class="keyword">new</span> File(path, <span class="string">"employee.xml"</span>);         </span><br><span class="line">        <span class="comment">// 解析的主类Digester</span></span><br><span class="line">        Digester digester = <span class="keyword">new</span> Digester();		</span><br><span class="line">        <span class="comment">// 增加匹配模式</span></span><br><span class="line">        digester.addObjectCreate(<span class="string">"employee"</span>, <span class="string">"com.bingli.digester.test.Employee"</span>);</span><br><span class="line">        digester.addSetProperties(<span class="string">"employee"</span>);</span><br><span class="line">        digester.addCallMethod(<span class="string">"employee"</span>, <span class="string">"printName"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            Employee employee = (Employee) digester.parse(file);</span><br><span class="line">            System.out.println(<span class="string">"First name : "</span> + employee.getFirstName());</span><br><span class="line">            System.out.println(<span class="string">"Last name : "</span> + employee.getLastName());</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Test01.java执行结果：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Creating Employee</span><br><span class="line">Setting firstName : Brian</span><br><span class="line">Setting lastName : May</span><br><span class="line">My name is Brian May</span><br><span class="line">First name : Brian</span><br><span class="line">Last name : May</span><br></pre></td></tr></table></figure>
+<p>根据结果，分析解析过程如下：</p>
+<p>1、digester通过Employee构造函数创建Employee对象</p>
+<p>2、调用set方法设置firstName和lastName属性</p>
+<p>3、digester调用employee对象的printName方法</p>
+<h3 id="Digester-基本api介绍"><a href="#Digester-基本api介绍" class="headerlink" title="Digester 基本api介绍"></a>Digester 基本api介绍</h3><p>在上面的例子中，org.apache.tomcat.util.digester.Digester类是Digester库的主类，该类可用于解析xml文件，对与xml文档中的每个元素，Digester对象都会检查是否要做事先预定义的事件，在进行xml解析之前，开发人员需要设计匹配模式。employee.xml文件中根元素是employee，employee元素的有一个模式employee。office是employee的子元素，因此，office的模式是employee/office。以此类推，address元素的模式是employee/office/address。</p>
+<h4 id="对象创建"><a href="#对象创建" class="headerlink" title="对象创建"></a>对象创建</h4><p>若想要digester根据找到的模式创建相应的对象，则可以调用addObjectCreate方法。该方法有四个重载版本，比较有用的是下面两个：</p>
+<p><strong><em>public void addObjectCreate(String pattern, Class clazz)</em></strong></p>
+<p>根据类的Class对象来创建，eg：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">digester.addObjectCreate(<span class="string">"employee"</span>, Employee.class);</span><br></pre></td></tr></table></figure>
+<p><strong><em>public void addObjectCreate(String pattern, String className)</em></strong></p>
+<p>根据类的完成类名创建，eg：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">digester.addObjectCreate(<span class="string">"employee"</span>, <span class="string">"com.bingli.digester.test.Employee"</span>);</span><br></pre></td></tr></table></figure>
+<p><strong><em>public void addObjectCreate(String pattern, String className, String attributeName)</em></strong></p>
+<p>根据element的属性的值创建对象，当找不到属性，这使用默认的类名，eg:</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;?xml version="1.0" encoding="UTF-8"?&gt; </span><br><span class="line"><span class="tag">&lt;<span class="name">employee</span> <span class="attr">firstName</span>=<span class="string">"Brian"</span> <span class="attr">lastName</span>=<span class="string">"May"</span> <span class="attr">className</span>=<span class="string">"com.bingli.digester.test.Employee"</span>&gt;</span> </span><br><span class="line"><span class="tag">&lt;/<span class="name">employee</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">digester.addObjectCreate(<span class="string">"employee"</span>, <span class="string">"com.bingli.digester.test.Employee"</span>, <span class="string">"className"</span>);</span><br></pre></td></tr></table></figure>
+<p><strong><em>public void addObjectCreate(String pattern, String attributeName, Class clazz)</em></strong></p>
+<p> 根据element的属性的值创建对象，当找不到属性，这使用默认的类的Class对象创建。<br><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;?xml version="1.0" encoding="UTF-8"?&gt; </span><br><span class="line"><span class="tag">&lt;<span class="name">employee</span> <span class="attr">firstName</span>=<span class="string">"Brian"</span> <span class="attr">lastName</span>=<span class="string">"May"</span> <span class="attr">className</span>=<span class="string">"com.bingli.digester.test.Employee"</span>&gt;</span> </span><br><span class="line"><span class="tag">&lt;/<span class="name">employee</span>&gt;</span></span><br></pre></td></tr></table></figure></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">digester.addObjectCreate(<span class="string">"employee"</span>, <span class="string">"className"</span>, Employee.class);</span><br></pre></td></tr></table></figure>
+<h4 id="设置属性"><a href="#设置属性" class="headerlink" title="设置属性"></a>设置属性</h4><p>使用该方法可以为创建的对象设置属性。其中的一个重载方法的签名是：</p>
+<p><strong><em>public void addSetProperties(String pattern)</em></strong></p>
+<p>使用时，传入一个模式字符串，eg：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">digester.addObjectCreate(<span class="string">"employee"</span>, <span class="string">"com.bingli.digester.test.Employee"</span>);</span><br><span class="line">digester.addSetProperties(<span class="string">"employee"</span>);</span><br></pre></td></tr></table></figure>
+<p>上面的digester对象有两个rule，创建对象和设置属性，都是通过“employee”模式触发的。rule按照其</p>
+<p>添加到digester中的顺序执行。Digester对象会首先创建com.bingli.digester.test.Employee对象，然后调用setFirstName和setLastName方法设置属性。</p>
+<h4 id="调用对象方法"><a href="#调用对象方法" class="headerlink" title="调用对象方法"></a>调用对象方法</h4><p>Digester类允许通过添加一个rule的方式来调用栈顶对象的方法。该方法签名如下：</p>
+<p><strong><em>public void addCallMethod (String pattern, String methodName)</em></strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">digester.addCallMethod(<span class="string">"employee"</span>, <span class="string">"printName"</span>);</span><br></pre></td></tr></table></figure>
+<h4 id="构建对象之间的关系"><a href="#构建对象之间的关系" class="headerlink" title="构建对象之间的关系"></a>构建对象之间的关系</h4><p>Digester对象中包含有一个内部栈，用于临时存储创建的对象。当使用addObjectCreate方法创建一个对</p>
+<p>象时，生成的对象会存储在这个栈中。addSetNext方法用于创建栈中两个对象之间的关系，实际上，这两个对象是xml文件中两个具有父子关系的标签所对应的对象。方法签名如下：</p>
+<p><strong><em>public void addSetNext(String pattern, String methodName)</em></strong></p>
+<p>其中，参数pattern是子元素对应的模式，参数methodName是父元素添加子元素时使用的方法名。考</p>
+<p>虑到Digester创建对象时会先创建父元素对应的对象，相比于子元素对象，父元素对象会更靠近栈底，eg：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">digester.addObjectCreate(<span class="string">"employee"</span>, <span class="string">"com.bingli.digester.test.Employee"</span>);</span><br><span class="line">digester.addSetProperties(<span class="string">"employee"</span>);    </span><br><span class="line">digester.addObjectCreate(<span class="string">"employee/office"</span>, <span class="string">"com.bingli.digester.test.Office"</span>);</span><br><span class="line">digester.addSetProperties(<span class="string">"employee/office"</span>);</span><br><span class="line">digester.addSetNext(<span class="string">"employee/office"</span>, <span class="string">"addOffice"</span>);</span><br></pre></td></tr></table></figure>
+<p>假如office下还有子元素，并增加了这样的模式，setAddress和addOffice谁先执行？</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">digester.addObjectCreate(<span class="string">"employee/office/address"</span>, <span class="string">"com.bingli.digester.test.Address"</span>);</span><br><span class="line">digester.addSetProperties(<span class="string">"employee/office/address"</span>);</span><br><span class="line">digester.addSetNext(<span class="string">"employee/office/address"</span>, <span class="string">"setAddress"</span>);</span><br></pre></td></tr></table></figure>
+<p>答案是<strong>addOffice的操作会在setAddress操作完成之后进行</strong></p>
+<h4 id="验证xml文档"><a href="#验证xml文档" class="headerlink" title="验证xml文档"></a>验证xml文档</h4><p>Digester对象解析的xml文档的有效性可通过schema进行验证，然后将结果记录与Digester对象的</p>
+<p>validating属性中，该属性默认为false。setValidating方法用于设置是否要对xml文件进行验证，方法签名如下：</p>
+<p><strong><em>public void setValidating(boolean validating)</em></strong></p>
+<h4 id="模式规则Rule"><a href="#模式规则Rule" class="headerlink" title="模式规则Rule"></a>模式规则Rule</h4><p>Rule类中包含了一些方法，其中最重要的是begin和end方法。当Digester对象遇到xml文档的开始标签时，会调用匹配规则的begin方法；当遇到结束标签时，会调用end方法。Rule类的begin和end方法的签名如下：</p>
+<p><strong><em>public void begin(org.xml.sax.Attributes attributes) throws java.lang.Exception</em></strong></p>
+<p><strong><em>public void end() throws java.lang.Exception</em></strong></p>
+<p>来看看SetNextRule.end方法，实际就是通过IntrospectionUtils这个工具反射调用parent的方法将child设置进去：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">end</span><span class="params">(String namespace, String name)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    <span class="comment">// Identify the objects to be used</span></span><br><span class="line">    Object child = digester.peek(<span class="number">0</span>);</span><br><span class="line">    Object parent = digester.peek(<span class="number">1</span>);</span><br><span class="line">    <span class="keyword">if</span> (digester.log.isDebugEnabled()) &#123;</span><br><span class="line">        <span class="keyword">if</span> (parent == <span class="keyword">null</span>) &#123;</span><br><span class="line">            digester.log.debug(<span class="string">"[SetNextRule]&#123;"</span> + digester.match +</span><br><span class="line">                               <span class="string">"&#125; Call [NULL PARENT]."</span> +</span><br><span class="line">                               methodName + <span class="string">"("</span> + child + <span class="string">")"</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            digester.log.debug(<span class="string">"[SetNextRule]&#123;"</span> + digester.match +</span><br><span class="line">                               <span class="string">"&#125; Call "</span> + parent.getClass().getName() + <span class="string">"."</span> +</span><br><span class="line">                               methodName + <span class="string">"("</span> + child + <span class="string">")"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Call the specified method</span></span><br><span class="line">    IntrospectionUtils.callMethod1(parent, methodName,</span><br><span class="line">                                   child, paramType, digester.getClassLoader());</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Digester对象是如何完成这些工作的呢？当调用digester对象的addObjectCreate，addCallMethod，addSetNext或其他方法时，实际上是调用digester的addRule方法，该方法会将一个rule对象和它所匹配的模式添加到digester对象中。addRule方法签名如下：</p>
+<p><strong><em>public void addRule(String pattern, Rule rule)</em></strong></p>
+<p>Digester类的addRule方法的实现如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addRule</span><span class="params">(String pattern, Rule rule)</span> </span>&#123; </span><br><span class="line">   rule.setDigester(<span class="keyword">this</span>); </span><br><span class="line">   getRules().add(pattern, rule); </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>继续查看Digester类的addObjectCreate方法的重载实现，实际就是调用了上面的addRule方法如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addObjectCreate</span><span class="params">(String pattern, String className)</span> </span>&#123; </span><br><span class="line">   addRule(pattern, <span class="keyword">new</span> ObjectCreateRule(className)); </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们查看Digester的其他方法，都会找到对应的xxxRule。</p>
+<h4 id="模式规则集合RuleSet"><a href="#模式规则集合RuleSet" class="headerlink" title="模式规则集合RuleSet"></a>模式规则集合RuleSet</h4><p>digester对象中添加rule还可以调用addRuleSet方法，方法签名如下：</p>
+<p><strong><em>public void addRuleSet(RuleSet ruleSet)</em></strong></p>
+<p>RuleSet类表示了rule对象的集合。创建了digester对象后，可以创建一个RuleSet对象，然后将RuleSet对象传给digester的addRuleSet方法。该接口定义了两个方法addRuleInstance和getNamespaceURI，方法签名如下：</p>
+<p><strong><em>public void addRuleInstance(Digester digester)</em></strong> 添加rule集合到digester对象中</p>
+<p><strong><em>public String getNamespaceURI()</em></strong>  返回命名空间uri，uri会匹配到RuleSet中所有的rule对象</p>
+<p>RuleSetBase类实现了RuleSet接口，RuleSetBase是一个虚类，提供了getNamespaceURI方法的实现，</p>
+<p>使用者只需要提供addRuleInstance方法的实现即可。eg:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.bingli.digester.test;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.tomcat.util.digester.Digester;</span><br><span class="line"><span class="keyword">import</span> org.apache.tomcat.util.digester.RuleSetBase;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">EmployeeRuleSet</span> <span class="keyword">extends</span> <span class="title">RuleSetBase</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addRuleInstances</span><span class="params">(Digester digester)</span> </span>&#123;</span><br><span class="line">		<span class="comment">// add rules</span></span><br><span class="line">		digester.addObjectCreate(<span class="string">"employee"</span>, <span class="string">"com.bingli.digester.test.Employee"</span>);</span><br><span class="line">		digester.addSetProperties(<span class="string">"employee"</span>);</span><br><span class="line">		digester.addObjectCreate(<span class="string">"employee/office"</span>, <span class="string">"com.bingli.digester.test.Office"</span>);</span><br><span class="line">		digester.addSetProperties(<span class="string">"employee/office"</span>);</span><br><span class="line">		digester.addSetNext(<span class="string">"employee/office"</span>, <span class="string">"addOffice"</span>);</span><br><span class="line">		digester.addObjectCreate(<span class="string">"employee/office/address"</span>, <span class="string">"com.bingli.digester.test.Address"</span>);</span><br><span class="line">		digester.addSetProperties(<span class="string">"employee/office/address"</span>);</span><br><span class="line">		digester.addSetNext(<span class="string">"employee/office/address"</span>, <span class="string">"setAddress"</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.bingli.digester.test;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.io.File;</span><br><span class="line"><span class="keyword">import</span> java.util.ArrayList;</span><br><span class="line"><span class="keyword">import</span> java.util.Iterator;</span><br><span class="line"><span class="keyword">import</span> org.apache.tomcat.util.digester.Digester;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test02</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">		String path = System.getProperty(<span class="string">"user.dir"</span>) + File.separator + <span class="string">"src"</span>;</span><br><span class="line">		File file = <span class="keyword">new</span> File(path, <span class="string">"employee.xml"</span>);</span><br><span class="line">		Digester digester = <span class="keyword">new</span> Digester();</span><br><span class="line">		digester.addRuleSet(<span class="keyword">new</span> EmployeeRuleSet());</span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			Employee employee = (Employee) digester.parse(file);</span><br><span class="line">		&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">			e.printStackTrace();</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Tomcat中使用Digester"><a href="#Tomcat中使用Digester" class="headerlink" title="Tomcat中使用Digester"></a>Tomcat中使用Digester</h3><p>tomcat中部分Rule的实现：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ObjectCreateRule</span><br><span class="line">CallMethodRule</span><br><span class="line">SetPropertiesRule</span><br><span class="line">SetNextRule</span><br></pre></td></tr></table></figure>
+<p>tomcat中定义的RuleSet：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">ContextRuleSet --解析server.xml中的Server/Service/Engine/Host/Context元素、context.xml</span><br><span class="line">EngineRuleSet  --解析Server/Service/Engine元素</span><br><span class="line">HostRuleSet    --解析Server/Service/Engine/Host元素</span><br><span class="line">MemoryRuleSet  --解析tomcat-users.xml</span><br><span class="line">NamingRuleSet  --解析Server/GlobalNamingResources和Server/Service/Engine/Host/Context下Resource等</span><br><span class="line">RealmRuleSet   --解析Context、Engine、Host下的Realm元素</span><br><span class="line">TldRuleSet     --解析.tld文件 </span><br><span class="line">WebRuleSet     --解析web.xml、web-fragment.xml</span><br></pre></td></tr></table></figure>
+<h4 id="server-xml解析"><a href="#server-xml解析" class="headerlink" title="server.xml解析"></a>server.xml解析</h4><p>Catalina.load中解析server.xml代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">load</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    	<span class="comment">// 省略部分代码......</span></span><br><span class="line">        <span class="comment">// Create and execute our Digester</span></span><br><span class="line">        Digester digester = createStartDigester();</span><br><span class="line">        InputSource inputSource = <span class="keyword">null</span>;</span><br><span class="line">        InputStream inputStream = <span class="keyword">null</span>;</span><br><span class="line">        File file = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                file = configFile();</span><br><span class="line">                inputStream = <span class="keyword">new</span> FileInputStream(file);</span><br><span class="line">                inputSource = <span class="keyword">new</span> InputSource(file.toURI().toURL().toString());</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                <span class="keyword">if</span> (log.isDebugEnabled()) &#123;</span><br><span class="line">                    log.debug(sm.getString(<span class="string">"catalina.configFail"</span>, file), e);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// 省略部分代码......</span></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                inputSource.setByteStream(inputStream);</span><br><span class="line">                digester.push(<span class="keyword">this</span>);</span><br><span class="line">                digester.parse(inputSource);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (SAXParseException spe) &#123;</span><br><span class="line">                log.warn(<span class="string">"Catalina.start using "</span> + getConfigFile() + <span class="string">": "</span> +</span><br><span class="line">                        spe.getMessage());</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                log.warn(<span class="string">"Catalina.start using "</span> + getConfigFile() + <span class="string">": "</span> , e);</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (inputStream != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    inputStream.close();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">                    <span class="comment">// Ignore</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        getServer().setCatalina(<span class="keyword">this</span>);</span><br><span class="line">        <span class="comment">// 省略部分代码......</span></span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>Digester对象创建，前面所说的Rule和RuleSet在此处都有使用，具体每行代码的作用可以对比上面的案例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> Digester <span class="title">createStartDigester</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">long</span> t1=System.currentTimeMillis();</span><br><span class="line">    <span class="comment">// Initialize the digester</span></span><br><span class="line">    Digester digester = <span class="keyword">new</span> Digester();</span><br><span class="line">    digester.setValidating(<span class="keyword">false</span>);</span><br><span class="line">    digester.setRulesValidation(<span class="keyword">true</span>);</span><br><span class="line">    HashMap&lt;Class&lt;?&gt;, List&lt;String&gt;&gt; fakeAttributes =</span><br><span class="line">        <span class="keyword">new</span> HashMap&lt;Class&lt;?&gt;, List&lt;String&gt;&gt;();</span><br><span class="line">    ArrayList&lt;String&gt; attrs = <span class="keyword">new</span> ArrayList&lt;String&gt;();</span><br><span class="line">    attrs.add(<span class="string">"className"</span>);</span><br><span class="line">    fakeAttributes.put(Object.class, attrs);</span><br><span class="line">    digester.setFakeAttributes(fakeAttributes);</span><br><span class="line">    digester.setUseContextClassLoader(<span class="keyword">true</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Configure the actions we will be using</span></span><br><span class="line">    digester.addObjectCreate(<span class="string">"Server"</span>,</span><br><span class="line">                             <span class="string">"org.apache.catalina.core.StandardServer"</span>,</span><br><span class="line">                             <span class="string">"className"</span>);</span><br><span class="line">    digester.addSetProperties(<span class="string">"Server"</span>);</span><br><span class="line">    digester.addSetNext(<span class="string">"Server"</span>,</span><br><span class="line">                        <span class="string">"setServer"</span>,</span><br><span class="line">                        <span class="string">"org.apache.catalina.Server"</span>);</span><br><span class="line"></span><br><span class="line">    digester.addObjectCreate(<span class="string">"Server/GlobalNamingResources"</span>,</span><br><span class="line">                             <span class="string">"org.apache.catalina.deploy.NamingResources"</span>);</span><br><span class="line">    digester.addSetProperties(<span class="string">"Server/GlobalNamingResources"</span>);</span><br><span class="line">    digester.addSetNext(<span class="string">"Server/GlobalNamingResources"</span>,</span><br><span class="line">                        <span class="string">"setGlobalNamingResources"</span>,</span><br><span class="line">                        <span class="string">"org.apache.catalina.deploy.NamingResources"</span>);</span><br><span class="line"></span><br><span class="line">    digester.addObjectCreate(<span class="string">"Server/Listener"</span>,</span><br><span class="line">                             <span class="keyword">null</span>, <span class="comment">// MUST be specified in the element</span></span><br><span class="line">                             <span class="string">"className"</span>);</span><br><span class="line">    digester.addSetProperties(<span class="string">"Server/Listener"</span>);</span><br><span class="line">    digester.addSetNext(<span class="string">"Server/Listener"</span>,</span><br><span class="line">                        <span class="string">"addLifecycleListener"</span>,</span><br><span class="line">                        <span class="string">"org.apache.catalina.LifecycleListener"</span>);</span><br><span class="line"></span><br><span class="line">    digester.addObjectCreate(<span class="string">"Server/Service"</span>,</span><br><span class="line">                             <span class="string">"org.apache.catalina.core.StandardService"</span>,</span><br><span class="line">                             <span class="string">"className"</span>);</span><br><span class="line">    digester.addSetProperties(<span class="string">"Server/Service"</span>);</span><br><span class="line">    digester.addSetNext(<span class="string">"Server/Service"</span>,</span><br><span class="line">                        <span class="string">"addService"</span>,</span><br><span class="line">                        <span class="string">"org.apache.catalina.Service"</span>);</span><br><span class="line"></span><br><span class="line">    digester.addObjectCreate(<span class="string">"Server/Service/Listener"</span>,</span><br><span class="line">                             <span class="keyword">null</span>, <span class="comment">// MUST be specified in the element</span></span><br><span class="line">                             <span class="string">"className"</span>);</span><br><span class="line">    digester.addSetProperties(<span class="string">"Server/Service/Listener"</span>);</span><br><span class="line">    digester.addSetNext(<span class="string">"Server/Service/Listener"</span>,</span><br><span class="line">                        <span class="string">"addLifecycleListener"</span>,</span><br><span class="line">                        <span class="string">"org.apache.catalina.LifecycleListener"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//Executor</span></span><br><span class="line">    digester.addObjectCreate(<span class="string">"Server/Service/Executor"</span>,</span><br><span class="line">                             <span class="string">"org.apache.catalina.core.StandardThreadExecutor"</span>,</span><br><span class="line">                             <span class="string">"className"</span>);</span><br><span class="line">    digester.addSetProperties(<span class="string">"Server/Service/Executor"</span>);</span><br><span class="line"></span><br><span class="line">    digester.addSetNext(<span class="string">"Server/Service/Executor"</span>,</span><br><span class="line">                        <span class="string">"addExecutor"</span>,</span><br><span class="line">                        <span class="string">"org.apache.catalina.Executor"</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    digester.addRule(<span class="string">"Server/Service/Connector"</span>,</span><br><span class="line">                     <span class="keyword">new</span> ConnectorCreateRule());</span><br><span class="line">    digester.addRule(<span class="string">"Server/Service/Connector"</span>,</span><br><span class="line">                     <span class="keyword">new</span> SetAllPropertiesRule(<span class="keyword">new</span> String[]&#123;<span class="string">"executor"</span>&#125;));</span><br><span class="line">    digester.addSetNext(<span class="string">"Server/Service/Connector"</span>,</span><br><span class="line">                        <span class="string">"addConnector"</span>,</span><br><span class="line">                        <span class="string">"org.apache.catalina.connector.Connector"</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    digester.addObjectCreate(<span class="string">"Server/Service/Connector/Listener"</span>,</span><br><span class="line">                             <span class="keyword">null</span>, <span class="comment">// MUST be specified in the element</span></span><br><span class="line">                             <span class="string">"className"</span>);</span><br><span class="line">    digester.addSetProperties(<span class="string">"Server/Service/Connector/Listener"</span>);</span><br><span class="line">    digester.addSetNext(<span class="string">"Server/Service/Connector/Listener"</span>,</span><br><span class="line">                        <span class="string">"addLifecycleListener"</span>,</span><br><span class="line">                        <span class="string">"org.apache.catalina.LifecycleListener"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Add RuleSets for nested elements</span></span><br><span class="line">    digester.addRuleSet(<span class="keyword">new</span> NamingRuleSet(<span class="string">"Server/GlobalNamingResources/"</span>));</span><br><span class="line">    digester.addRuleSet(<span class="keyword">new</span> EngineRuleSet(<span class="string">"Server/Service/"</span>));</span><br><span class="line">    digester.addRuleSet(<span class="keyword">new</span> HostRuleSet(<span class="string">"Server/Service/Engine/"</span>));</span><br><span class="line">    digester.addRuleSet(<span class="keyword">new</span> ContextRuleSet(<span class="string">"Server/Service/Engine/Host/"</span>));</span><br><span class="line">    addClusterRuleSet(digester, <span class="string">"Server/Service/Engine/Host/Cluster/"</span>);</span><br><span class="line">    digester.addRuleSet(<span class="keyword">new</span> NamingRuleSet(<span class="string">"Server/Service/Engine/Host/Context/"</span>));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// When the 'engine' is found, set the parentClassLoader.</span></span><br><span class="line">    digester.addRule(<span class="string">"Server/Service/Engine"</span>,</span><br><span class="line">                     <span class="keyword">new</span> SetParentClassLoaderRule(parentClassLoader));</span><br><span class="line">    addClusterRuleSet(digester, <span class="string">"Server/Service/Engine/Cluster/"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">long</span> t2=System.currentTimeMillis();</span><br><span class="line">    <span class="keyword">if</span> (log.isDebugEnabled()) &#123;</span><br><span class="line">        log.debug(<span class="string">"Digester for server.xml created "</span> + ( t2-t1 ));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> (digester);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>此处我们需要注意一个问题，由于Server是根元素，而且Catalina中调用digester.parse()解析出的对象并没有被Catalina中的server直接的引用（实际上parse出来的是Catalina对象），究竟是在什么地方设置进来的呢？原因在这儿：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// createStartDigester方法中</span></span><br><span class="line">digester.addObjectCreate(<span class="string">"Server"</span>, <span class="string">"org.apache.catalina.core.StandardServer"</span>, <span class="string">"className"</span>);</span><br><span class="line">digester.addSetProperties(<span class="string">"Server"</span>);</span><br><span class="line">digester.addSetNext(<span class="string">"Server"</span>, <span class="string">"setServer"</span>, <span class="string">"org.apache.catalina.Server"</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// load方法中</span></span><br><span class="line">digester.push(<span class="keyword">this</span>);</span><br><span class="line">digester.parse(inputSource);</span><br></pre></td></tr></table></figure>
+<p>addSetNext设置对象关系，Server并没有父对象，但是在parse之前通过digester.push()将Catalina对象压至栈底，因为还未开始解析，所以Catalina才是实际上的根元素，因此解析完在end方法中将Canalina作为父对象，并反射调用setServer方法将server设置给Catalina的server引用。</p>
+<h4 id="context-xml和web-xml解析"><a href="#context-xml和web-xml解析" class="headerlink" title="context.xml和web.xml解析"></a>context.xml和web.xml解析</h4><p>context.xml和web.xml解析主要是部署过程中解析，主要是在ContextConfig.init方法中，ContextConfig实现了LifecycleListener接口，并添加给了StandardContext，因此应用部署的时候会做解析操作。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// Called from StandardContext.init()</span></span><br><span class="line">    Digester contextDigester = createContextDigester();</span><br><span class="line">    contextDigester.getParser();</span><br><span class="line">    <span class="keyword">if</span> (log.isDebugEnabled())</span><br><span class="line">    	log.debug(sm.getString(<span class="string">"contextConfig.init"</span>));</span><br><span class="line">    context.setConfigured(<span class="keyword">false</span>);</span><br><span class="line">    ok = <span class="keyword">true</span>;</span><br><span class="line">    <span class="comment">// 解析context.xml</span></span><br><span class="line">    contextConfig(contextDigester);</span><br><span class="line">    <span class="comment">// 解析web.xml以及web-fragment.xml</span></span><br><span class="line">    createWebXmlDigester(context.getXmlNamespaceAware(), context.getXmlValidation());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于tomcat配置解析就写这么多，Digester还有一些用法可以去官网看api文件和使用手册。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    Bing Li
+  </li>
+  <li class="post-copyright-created">
+    <strong>发表时间：</strong>
+ 2018-04-24 14:31:56
+  </li>
+  <li class="post-copyright-update">
+    <strong>最后更新：</strong>
+ 2018-04-24 14:31:56
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://bingli-borland.github.io/blog/2018/04/24/Tomcat源码分析—配置解析Digester/" title="Tomcat源码分析—配置解析Digester">https://bingli-borland.github.io/blog/2018/04/24/Tomcat源码分析—配置解析Digester/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/blog/tags/java/" rel="tag"># java</a>
+          
+            <a href="/blog/tags/tomcat/" rel="tag"># tomcat</a>
+          
+            <a href="/blog/tags/digester/" rel="tag"># digester</a>
+          
+            <a href="/blog/tags/server-xml/" rel="tag"># server.xml</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/blog/2018/04/08/Tomcat源码分析—Lifecycle生命周期/" rel="next" title="Tomcat源码分析—Lifecycle生命周期">
+                <i class="fa fa-chevron-left"></i> Tomcat源码分析—Lifecycle生命周期
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/blog/2018/05/07/Tomcat安全—HTTPS/" rel="prev" title="Tomcat安全—HTTPS">
+                Tomcat安全—HTTPS <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      
+        <div id="gitment-container"></div>
+      
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Bing Li</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/blog/archives/">
+              
+                  <span class="site-state-item-count">24</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/blog/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/blog/tags/index.html">
+                  <span class="site-state-item-count">46</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/blog/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          <div class="links-of-author motion-element">
+            
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/bingli-borland" target="_blank" title="GitHub">
+                    
+                      <i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="mailto:1042996632@qq.com" target="_blank" title="E-Mail">
+                    
+                      <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            
+          </div>
+    
+    <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-globe"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                  <li class="links-of-blogroll-item">
+                    <a href="http://jm.taobao.org/" title="阿里中间件博客" target="_blank">阿里中间件博客</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="http://blog.51cto.com/guojuanjun" title="天下无贼" target="_blank">天下无贼</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="https://segmentfault.com/u/wuyangchun" title="Linux����" target="_blank">wuyangchun(Linux)</a>
+                  </li>
+              </ul>
+            </div>
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Digester解析案例"><span class="nav-number">2.</span> <span class="nav-text">Digester解析案例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Digester-基本api介绍"><span class="nav-number">3.</span> <span class="nav-text">Digester 基本api介绍</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#对象创建"><span class="nav-number">3.1.</span> <span class="nav-text">对象创建</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#设置属性"><span class="nav-number">3.2.</span> <span class="nav-text">设置属性</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#调用对象方法"><span class="nav-number">3.3.</span> <span class="nav-text">调用对象方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#构建对象之间的关系"><span class="nav-number">3.4.</span> <span class="nav-text">构建对象之间的关系</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#验证xml文档"><span class="nav-number">3.5.</span> <span class="nav-text">验证xml文档</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#模式规则Rule"><span class="nav-number">3.6.</span> <span class="nav-text">模式规则Rule</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#模式规则集合RuleSet"><span class="nav-number">3.7.</span> <span class="nav-text">模式规则集合RuleSet</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Tomcat中使用Digester"><span class="nav-number">4.</span> <span class="nav-text">Tomcat中使用Digester</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#server-xml解析"><span class="nav-number">4.1.</span> <span class="nav-text">server.xml解析</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#context-xml和web-xml解析"><span class="nav-number">4.2.</span> <span class="nav-text">context.xml和web.xml解析</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2017 &mdash; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Bing Li</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a></div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/utils.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/motion.js?v=5.1.3"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/affix.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/schemes/pisces.js?v=5.1.3"></script>
+
+
+
+  
+  <script type="text/javascript" src="/blog/js/src/scrollspy.js?v=5.1.3"></script>
+<script type="text/javascript" src="/blog/js/src/post-details.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/bootstrap.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+<!-- LOCAL: You can save these files to your site and update links -->
+    
+        
+        <link rel="stylesheet" href="https://aimingoo.github.io/gitmint/style/default.css">
+        <script src="https://aimingoo.github.io/gitmint/dist/gitmint.browser.js"></script>
+    
+<!-- END LOCAL -->
+
+    
+
+    
+      <script type="text/javascript">
+      function renderGitment(){
+        var gitment = new Gitmint({
+            id: window.location.pathname, 
+            owner: 'bingli-borland',
+            repo: 'blog',
+            
+            lang: "" || navigator.language || navigator.systemLanguage || navigator.userLanguage,
+            
+            oauth: {
+            
+            
+                client_secret: '15d5986f446770cf9d00de45fe9cad58e0e890f3',
+            
+                client_id: '2827532caba6f447f0b0'
+            }});
+        gitment.render('gitment-container');
+      }
+
+      
+      renderGitment();
+      
+      </script>
+    
+
+
+
+
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/blog/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("UDWbbilpB75dbOg2gXfE9jqT-gzGzoHsz", "tdIIS5nlhxM9psPaMOOqtKLe");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

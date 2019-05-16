@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/blog/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/blog/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/blog/css/main.css?v=5.1.3" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/blog/images/apple-touch-icon-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/blog/images/favicon-32x32-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/blog/images/favicon-16x16-next.png?v=5.1.3">
+
+
+  <link rel="mask-icon" href="/blog/images/logo.svg?v=5.1.3" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="java,tomcat,https,wireshark,">
+
+
+
+
+
+  <link rel="alternate" href="/blog/atom.xml" title="技术与生活" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="前言上一篇文章已经讲了如何给tomcat配置https，证书制作等，本篇使用协议分析工具深入理解https，看看https握手的过程以及可能出现的问题，使用的环境： win10 x64 CentOS7.3 x64 Wireshark Version 2.6.0 (v2.6.0-0-gc7239f02)  下载地址">
+<meta name="keywords" content="java,tomcat,https,wireshark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tomcat安全—分析HTTPS">
+<meta property="og:url" content="https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/index.html">
+<meta property="og:site_name" content="技术与生活">
+<meta property="og:description" content="前言上一篇文章已经讲了如何给tomcat配置https，证书制作等，本篇使用协议分析工具深入理解https，看看https握手的过程以及可能出现的问题，使用的环境： win10 x64 CentOS7.3 x64 Wireshark Version 2.6.0 (v2.6.0-0-gc7239f02)  下载地址">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/http.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/http-detail.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/https-all.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/https-client-hello.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/https-server-hello.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/https-server-certificate.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/httpsr-certificate-req.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/https-client-certificate.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/https-alone.jpg">
+<meta property="og:updated_time" content="2018-05-13T14:28:56.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tomcat安全—分析HTTPS">
+<meta name="twitter:description" content="前言上一篇文章已经讲了如何给tomcat配置https，证书制作等，本篇使用协议分析工具深入理解https，看看https握手的过程以及可能出现的问题，使用的环境： win10 x64 CentOS7.3 x64 Wireshark Version 2.6.0 (v2.6.0-0-gc7239f02)  下载地址">
+<meta name="twitter:image" content="https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/http.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/blog/',
+    scheme: 'Gemini',
+    version: '5.1.3',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/">
+
+
+
+
+
+  <title>Tomcat安全—分析HTTPS | 技术与生活</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/blog/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术与生活</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/blog/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/blog/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/blog/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/blog/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/blog/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://bingli-borland.github.io/blog/blog/2018/05/13/Tomcat安全—分析HTTPS/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Bing Li">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/blog/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术与生活">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Tomcat安全—分析HTTPS</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-05-13T22:28:56+08:00">
+                2018-05-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/blog/categories/tomcat/" itemprop="url" rel="index">
+                    <span itemprop="name">tomcat</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/blog/2018/05/13/Tomcat安全—分析HTTPS/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count gitment-comments-count" data-xid="/blog/2018/05/13/Tomcat安全—分析HTTPS/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/blog/2018/05/13/Tomcat安全—分析HTTPS/" class="leancloud_visitors" data-flag-title="Tomcat安全—分析HTTPS">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>上一篇文章已经讲了如何给tomcat配置https，证书制作等，本篇使用协议分析工具深入理解https，看看https握手的过程以及可能出现的问题，使用的环境：</p>
+<p>win10 x64</p>
+<p>CentOS7.3 x64</p>
+<p>Wireshark Version 2.6.0 (v2.6.0-0-gc7239f02)  <a href="https://www.wireshark.org/download/win64/all-versions/" target="_blank" rel="noopener">下载地址</a></p>
+<a id="more"></a>
+<h3 id="报文抓取"><a href="#报文抓取" class="headerlink" title="报文抓取"></a>报文抓取</h3><h4 id="HTTP"><a href="#HTTP" class="headerlink" title="HTTP"></a>HTTP</h4><p>首先我们来看一下，在不配置安全的情况下，http请求和响应的报文是如何的？这里由于我们是本地访问，因此无法使用wireshark抓取Loopback接口的数据包，因此需要用到linux的tcpdump命令来抓取数据。注意需要root用户。那么在上篇的环境下，启动tomcat，打开命令行执行如下命令：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">查看<span class="built_in">help</span>信息</span></span><br><span class="line">[root@k8s-master ~]# tcpdump --help</span><br><span class="line">tcpdump version 4.9.0</span><br><span class="line">libpcap version 1.5.3</span><br><span class="line">OpenSSL 1.0.1e-fips 11 Feb 2013</span><br><span class="line">Usage: tcpdump [-aAbdDefhHIJKlLnNOpqStuUvxX#] [ -B size ] [ -c count ]</span><br><span class="line">                [ -C file_size ] [ -E algo:secret ] [ -F file ] [ -G seconds ]</span><br><span class="line">                [ -i interface ] [ -j tstamptype ] [ -M secret ] [ --number ]</span><br><span class="line">                [ -Q|-P in|out|inout ]</span><br><span class="line">                [ -r file ] [ -s snaplen ] [ --time-stamp-precision precision ]</span><br><span class="line">                [ --immediate-mode ] [ -T type ] [ --version ] [ -V file ]</span><br><span class="line">                [ -w file ] [ -W filecount ] [ -y datalinktype ] [ -z postrotate-command ]</span><br><span class="line">                [ -Z user ] [ expression ]</span><br><span class="line">-i 指定网卡接口</span><br><span class="line">-w 写入数据包的文件名</span><br><span class="line">expression 过滤数据包的表达式</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> 开启一个终端，执行如下命令：抓取经过网卡eno16777736的，地址为192.168.1.110 端口为8080的数据，并写入文件http.pcap</span></span><br><span class="line">[root@k8s-master ~]# tcpdump -i eno16777736 host 192.168.1.110 and port 8080 -w http.pcap</span><br><span class="line"><span class="meta">#</span><span class="bash"> 另开一个终端，访问tomcat</span></span><br><span class="line">[root@k8s-master ~]# curl 'http://192.168.1.110:8080/examples/servlets/servlet/RequestParamExample'</span><br></pre></td></tr></table></figure>
+<p>在生成http.pcap文件，拷贝到windows后，用wireshark打开http.pcap文件：<br><img src="http.jpg" alt=""></p>
+<p><strong><em>数据包1-3</em></strong>：很明显这是tcp协议3次握手建立连接的数据包</p>
+<p><strong><em>数据包4-5</em></strong>：http请求和响应的数据包，右键点击数据包4–&gt;追踪流–&gt;HTTP流：<br><img src="http-detail.jpg" alt=""></p>
+<p>可以看到，红色部分为http请求数据，蓝色部分为http的响应</p>
+<p><strong><em>数据包6</em></strong>：客户端对收到数据包5的确认</p>
+<p><strong><em>数据包7-10</em></strong>：tcp协议4次挥手断开连接的数据包</p>
+<h4 id="HTTPS"><a href="#HTTPS" class="headerlink" title="HTTPS"></a>HTTPS</h4><p>这里有一些概念，https握手实际为SSL/TLS握手过程，可以分成两种类型：</p>
+<blockquote>
+<p>1）SSL/TLS 双向认证，就是双方都会互相认证，也就是两者之间将会交换证书。</p>
+<p>2）SSL/TLS 单向认证，客户端会认证服务器端身份，而服务器端不会去对客户端身份进行验证。</p>
+</blockquote>
+<p>SSL/TLS协议的基本思路是采用公钥加密，即客户端先向服务器端索要公钥，然后用公钥加密信息，服务器收到密文后，用自己的私钥解密。但是存在两个问题，</p>
+<p><strong>（1）如何保证公钥不被篡改？</strong></p>
+<blockquote>
+<p>解决方法：将公钥放在数字证书中。只要证书是可信的，公钥就是可信的，而数字证书的安全性又由CA认证中心来保证</p>
+</blockquote>
+<p><strong>（2）公钥加密计算量太大，如何减少耗用的时间？</strong></p>
+<blockquote>
+<p>解决方法：每一次对话（session），客户端和服务器端都生成一个”对话密钥”（session key），用它来加密信息。由于”对话密钥”是对称加密，所以运算速度非常快，而服务器公钥只用于加密”对话密钥”本身，这样就减少了加密运算的消耗时间。实际上https具体请求和响应的内容就是用的对话密钥加密解密的</p>
+</blockquote>
+<p>上面我们已经启动了tomcat，8443端口就是需要https访问的端口，这里我们为了排除浏览器干扰，决定使用java写一个客户端程序访问https，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.io.BufferedReader;</span><br><span class="line"><span class="keyword">import</span> java.io.File;</span><br><span class="line"><span class="keyword">import</span> java.io.FileInputStream;</span><br><span class="line"><span class="keyword">import</span> java.io.FileNotFoundException;</span><br><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"><span class="keyword">import</span> java.io.InputStreamReader;</span><br><span class="line"><span class="keyword">import</span> java.io.UnsupportedEncodingException;</span><br><span class="line"><span class="keyword">import</span> java.net.HttpURLConnection;</span><br><span class="line"><span class="keyword">import</span> java.net.URL;</span><br><span class="line"><span class="keyword">import</span> java.security.KeyManagementException;</span><br><span class="line"><span class="keyword">import</span> java.security.KeyStore;</span><br><span class="line"><span class="keyword">import</span> java.security.KeyStoreException;</span><br><span class="line"><span class="keyword">import</span> java.security.NoSuchAlgorithmException;</span><br><span class="line"><span class="keyword">import</span> java.security.SecureRandom;</span><br><span class="line"><span class="keyword">import</span> java.security.UnrecoverableKeyException;</span><br><span class="line"><span class="keyword">import</span> java.security.cert.CertificateException;</span><br><span class="line"><span class="keyword">import</span> java.util.List;</span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.net.ssl.HostnameVerifier;</span><br><span class="line"><span class="keyword">import</span> javax.net.ssl.HttpsURLConnection;</span><br><span class="line"><span class="keyword">import</span> javax.net.ssl.KeyManager;</span><br><span class="line"><span class="keyword">import</span> javax.net.ssl.KeyManagerFactory;</span><br><span class="line"><span class="keyword">import</span> javax.net.ssl.SSLContext;</span><br><span class="line"><span class="keyword">import</span> javax.net.ssl.SSLSession;</span><br><span class="line"><span class="keyword">import</span> javax.net.ssl.TrustManager;</span><br><span class="line"><span class="keyword">import</span> javax.net.ssl.TrustManagerFactory;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HttpsTest</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 客户端证书</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> String KEY_STORE_FILE = <span class="string">"/root/client.p12"</span>;</span><br><span class="line">    <span class="comment">// 客户端证书密码</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> String KEY_STORE_PASS = <span class="string">"changeit"</span>;</span><br><span class="line">    <span class="comment">// 客户端证书信任库</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> String TRUST_STORE_FILE = <span class="string">"/root/cacerts.jks"</span>;</span><br><span class="line">    <span class="comment">// 客户端证书信任库密码</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> String TRUST_STORE_PASS = <span class="string">"changeit"</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> SSLContext sslContext;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 向指定URL发送GET方法的请求</span></span><br><span class="line"><span class="comment">     * </span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> url</span></span><br><span class="line"><span class="comment">     *            发送请求的URL</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> param</span></span><br><span class="line"><span class="comment">     *            请求参数，请求参数应该是 name1=value1&amp;name2=value2 的形式。</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> URL 所代表远程资源的响应结果</span></span><br><span class="line"><span class="comment">     * </span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">sendGet</span><span class="params">(String url, String param)</span> </span>&#123;</span><br><span class="line">        String result = <span class="string">""</span>;</span><br><span class="line">        BufferedReader in = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            String urlNameString = url + <span class="string">"?"</span> + param;</span><br><span class="line">            URL realUrl = <span class="keyword">new</span> URL(urlNameString);</span><br><span class="line">            <span class="comment">// 打开和URL之间的连接</span></span><br><span class="line">            HttpURLConnection connection = (HttpURLConnection) realUrl.openConnection();</span><br><span class="line">            <span class="comment">// 如果connection是HttpsConnection，则设置SSLContext</span></span><br><span class="line">            <span class="keyword">if</span> (connection <span class="keyword">instanceof</span> HttpsURLConnection) &#123;</span><br><span class="line">                ((HttpsURLConnection) connection).setSSLSocketFactory(getSSLContext().getSocketFactory());</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 设置通用的请求属性</span></span><br><span class="line">            connection.setRequestProperty(<span class="string">"accept"</span>, <span class="string">"*/*"</span>);</span><br><span class="line">            connection.setRequestProperty(<span class="string">"connection"</span>, <span class="string">"Keep-Alive"</span>);</span><br><span class="line">            connection.setRequestProperty(<span class="string">"user-agent"</span>, <span class="string">"Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1;SV1)"</span>);</span><br><span class="line">            <span class="comment">// 建立实际的连接</span></span><br><span class="line">            connection.connect();</span><br><span class="line">            <span class="comment">// 获取所有响应头字段</span></span><br><span class="line">            Map&lt;String, List&lt;String&gt;&gt; map = connection.getHeaderFields();</span><br><span class="line">            <span class="comment">// 遍历所有的响应头字段</span></span><br><span class="line">            <span class="keyword">for</span> (String key : map.keySet()) &#123;</span><br><span class="line">                System.out.println(key + <span class="string">"---&gt;"</span> + map.get(key));</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// 定义 BufferedReader输入流来读取URL的响应</span></span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (connection.getResponseCode() == <span class="number">200</span>) &#123;</span><br><span class="line">                in = <span class="keyword">new</span> BufferedReader(<span class="keyword">new</span> InputStreamReader(connection.getInputStream()));</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                in = <span class="keyword">new</span> BufferedReader(<span class="keyword">new</span> InputStreamReader(connection.getErrorStream()));</span><br><span class="line">            &#125;</span><br><span class="line">            String line;</span><br><span class="line">            <span class="keyword">while</span> ((line = in.readLine()) != <span class="keyword">null</span>) &#123;</span><br><span class="line">                result += line;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            System.out.println(<span class="string">"发送GET请求出现异常！"</span> + e);</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 使用finally块来关闭输入流</span></span><br><span class="line">        <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (in != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    in.close();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e2) &#123;</span><br><span class="line">                e2.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> SSLContext <span class="title">getSSLContext</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">long</span> time1 = System.currentTimeMillis();</span><br><span class="line">        <span class="keyword">if</span> (sslContext == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                KeyManagerFactory kmf = KeyManagerFactory.getInstance(<span class="string">"SunX509"</span>);</span><br><span class="line">                kmf.init(getkeyStore(), KEY_STORE_PASS.toCharArray());</span><br><span class="line">                KeyManager[] keyManagers = kmf.getKeyManagers();</span><br><span class="line"></span><br><span class="line">                TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(<span class="string">"SunX509"</span>);</span><br><span class="line">                trustManagerFactory.init(getTrustStore());</span><br><span class="line">                TrustManager[] trustManagers = trustManagerFactory.getTrustManagers();</span><br><span class="line"></span><br><span class="line">                sslContext = SSLContext.getInstance(<span class="string">"TLS"</span>);</span><br><span class="line">                sslContext.init(keyManagers, trustManagers, <span class="keyword">new</span> SecureRandom());</span><br><span class="line">                HttpsURLConnection.setDefaultHostnameVerifier(<span class="keyword">new</span> HostnameVerifier() &#123;</span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">verify</span><span class="params">(String hostname, SSLSession session)</span> </span>&#123;</span><br><span class="line">                        <span class="comment">// 校验证书上的网址和访问的是否一致</span></span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (FileNotFoundException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (NoSuchAlgorithmException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (UnrecoverableKeyException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (KeyStoreException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (KeyManagementException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">long</span> time2 = System.currentTimeMillis();</span><br><span class="line">        System.out.println(<span class="string">"SSLContext 初始化时间："</span> + (time2 - time1));</span><br><span class="line">        <span class="keyword">return</span> sslContext;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 获取证书KeyStore</span></span><br><span class="line"><span class="comment">     * </span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> KeyStore <span class="title">getkeyStore</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        KeyStore keySotre = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">// client.p12证书类型是PKCS12</span></span><br><span class="line">            keySotre = KeyStore.getInstance(<span class="string">"PKCS12"</span>);</span><br><span class="line">            FileInputStream fis = <span class="keyword">new</span> FileInputStream(<span class="keyword">new</span> File(KEY_STORE_FILE));</span><br><span class="line">            keySotre.load(fis, KEY_STORE_PASS.toCharArray());</span><br><span class="line">            fis.close();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (KeyStoreException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (FileNotFoundException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (NoSuchAlgorithmException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (CertificateException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> keySotre;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 获取信任库TrustStore</span></span><br><span class="line"><span class="comment">     * </span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> IOException</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> KeyStore <span class="title">getTrustStore</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        KeyStore trustKeyStore = <span class="keyword">null</span>;</span><br><span class="line">        FileInputStream fis = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">// cacert.jks的证书类型是JKS</span></span><br><span class="line">            trustKeyStore = KeyStore.getInstance(<span class="string">"JKS"</span>);</span><br><span class="line">            fis = <span class="keyword">new</span> FileInputStream(<span class="keyword">new</span> File(TRUST_STORE_FILE));</span><br><span class="line">            trustKeyStore.load(fis, TRUST_STORE_PASS.toCharArray());</span><br><span class="line">        &#125; <span class="keyword">catch</span> (FileNotFoundException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (KeyStoreException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (NoSuchAlgorithmException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (CertificateException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            fis.close();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> trustKeyStore;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> UnsupportedEncodingException </span>&#123;</span><br><span class="line">        <span class="comment">// 设置TLS版本</span></span><br><span class="line">        System.setProperty(<span class="string">"https.protocols"</span>, <span class="string">"TLSv1.2"</span>);</span><br><span class="line">        String result = sendGet(<span class="string">"https://www.bingli.com:8443/examples/servlets/servlet/RequestParamExample"</span>, <span class="string">"a=x1"</span>);</span><br><span class="line">        System.out.println(result);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>wireshark中设置抓包规则，port  8443，然后在Linux下运行这段代码，抓取到的数据包如下：</p>
+<p><img src="https-all.jpg" alt=""></p>
+<p>ssl/tls握手的主要流程入下：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Client</th>
+<th style="text-align:left">Server</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">1 Client Hello</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left"></td>
+<td style="text-align:left">2 Server Hello <br>3 certificate<br><font color="red">4 (server_key_exchange)</font><br><font color="red">5 (certificate_request)</font><br>6 server_hello_done</td>
+</tr>
+<tr>
+<td style="text-align:left"><font color="red">7 (certificate)</font><br>8 client_key_exchange<br><font color="red">9 (certifiate_verify)</font><br>10 change_cypher_spec<br>11 Encrypted Handshake Message</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left"></td>
+<td style="text-align:left">12 change_cypher_spec<br>13 Encrypted Handshake Message</td>
+</tr>
+</tbody>
+</table>
+<p><strong>第一步是客户端向服务端发送消息：</strong></p>
+<p><img src="https-client-hello.jpg" alt=""></p>
+<h5 id="Client-Hello"><a href="#Client-Hello" class="headerlink" title="Client Hello"></a>Client Hello</h5><p>客户端向服务端发送 Client Hello 消息，这个消息里包含了</p>
+<p>（1）采用的协议版本，比如TLS 1.2</p>
+<p>（2）客户端生成的随机数Random1，稍后用于生成”对话密钥”</p>
+<p>（3）客户端支持的加密算法(Support Ciphers)</p>
+<p><strong>第二步服务器回答给客户端以下信息 ：</strong></p>
+<p><img src="https-server-hello.jpg" alt=""></p>
+<h5 id="Server-Hello"><a href="#Server-Hello" class="headerlink" title="Server Hello"></a>Server Hello</h5><p>此消息中包含如下信息：</p>
+<p>（1） 确认使用的协议版本</p>
+<p>（2） 服务端生成的随机数Random2，客户端和服务端都拥有了两个随机数（Random1+ Random2），这两个随机数会在后续生成“对话秘钥”时用到 </p>
+<p>（3） session id</p>
+<p>（4） 确认使用的加密套件，根据从 Client Hello 传过来的 Support Ciphers 里确定一份加密套件 ，例如</p>
+<blockquote>
+<p>Cipher Suite: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 (0xc02f)</p>
+<p>ECDHE : 密钥交换算法，用于生成premaster_secret（用于生成会话密钥master secret） </p>
+<p>RSA : 签名算法，用户安全传输premaster_secret </p>
+<p>AES_128 : 连接建立后的数据加密算法 </p>
+<p>GCM : 一种对称密钥加密操作的块密码模式 </p>
+</blockquote>
+<h5 id="Certificate（Server）"><a href="#Certificate（Server）" class="headerlink" title="Certificate（Server）"></a>Certificate（Server）</h5><p>此消息服务端将自己的证书下发给客户端，让客户端验证自己的身份，客户端验证通过后取出证书中的公钥，具体信息如下：</p>
+<p><img src="https-server-certificate.jpg" alt=""></p>
+<p>可以看到这就是我们在上篇文章里创建的服务端证书信息。</p>
+<h5 id="Server-Key-Exchange"><a href="#Server-Key-Exchange" class="headerlink" title="Server Key Exchange"></a>Server Key Exchange</h5><p>只有在客户端与服务器端双方协商采用的加密算法是DHE_DSS、DHE_RSA、DH_anon时Server Certificate消息中的服务器证书中的信息不足以生成premaster secret时服务器端才需要发送此消息                                                             </p>
+<h5 id="Certificate-Request"><a href="#Certificate-Request" class="headerlink" title="Certificate Request"></a>Certificate Request</h5><p>此信息表示要求客户端提供证书，当开启客户端验证即使用了双向认证的时候会发送此消息。主要包括</p>
+<p>（1） 客户端可以提供的证书类型</p>
+<p>（2）服务器接受的证书distinguished name列表，可以是root CA或者subordinate CA。如果服务器配置了trust keystore, 这里会列出所有在trust keystore中的证书的distinguished name。</p>
+<p><img src="httpsr-certificate-req.jpg" alt=""></p>
+<p>可以看到这就是我们在上篇文章里创建的信任库cacerts.jks中证书信息</p>
+<h5 id="Server-Hello-Done"><a href="#Server-Hello-Done" class="headerlink" title="Server Hello Done"></a>Server Hello Done</h5><p>Server Hello Done 通知客户端 Server Hello 过程结束 </p>
+<p><strong>第三步是客户端继续向服务端发送消息：</strong></p>
+<p><img src="https-client-certificate.jpg" alt=""></p>
+<h5 id="Certificate（Client）"><a href="#Certificate（Client）" class="headerlink" title="Certificate（Client）"></a>Certificate（Client）</h5><p>当服务端开启客户端验证的情况下，客户端将会把客户端证书发送给服务端，从上图中可以看到正是客户端证书client.p12的信息</p>
+<h5 id="Client-Key-Exchange"><a href="#Client-Key-Exchange" class="headerlink" title="Client Key Exchange"></a>Client Key Exchange</h5><p>客户端根据服务器传来的公钥生成了 <strong>Pre Master Secret</strong>，Client Key Exchange 就是将这个 key 传给服务端，服务端再用自己的私钥解出这个 <strong>PreMaster Secret</strong> 得到客户端生成的 <strong>Random3</strong>。至此，客户端和服务端都拥有 <strong>Random1</strong> + <strong>Random2</strong> + <strong>Random3</strong>，两边再根据同样的算法就可以生成对话密钥Master Secret，握手结束后的应用层数据都是使用这个对话秘钥进行对称加密和解密。</p>
+<blockquote>
+<p><strong>RSA</strong> ：<em>premaster_secret</em>是由客户端生成的随机数，用服务器证书中公钥加密后传输，服务器端采用私钥解密。</p>
+<p><strong>Diffie-Hellman</strong>： 对于<em>Diffie-Hellman</em>算法而言，双方通过<em>Server Key Exchange Message</em> 与 <em>Client Key Exchange Message</em> 交换两个数即可各自算出相同的加密密钥，用此当<strong>premaster_secret</strong></p>
+</blockquote>
+<h5 id="Certificate-Verify"><a href="#Certificate-Verify" class="headerlink" title="Certificate Verify"></a>Certificate Verify</h5><p>在服务端开启了客户端验证的情况下，客户端会发送此消息给服务端，其中携带到这一步为止收到和发送的所有握手消息用客户端证书私钥所做的签名，服务器收到此信息可利用公钥验证，是典型的数字签名验证场景。 </p>
+<h5 id="Change-Cipher-Spec（Client）"><a href="#Change-Cipher-Spec（Client）" class="headerlink" title="Change Cipher Spec（Client）"></a>Change Cipher Spec（Client）</h5><p>客户端生成<strong>master secret</strong>之后即可发送通知给服务器端，以后要使用对称密钥<strong>master secret</strong>来加密数据了！客户端使用上面的3个随机数client random, server random, pre-master secret, 计算出48字节的master secret, 这个就是对称加密算法的密钥。</p>
+<h5 id="Encrypt-Hanshake-Message（Client）"><a href="#Encrypt-Hanshake-Message（Client）" class="headerlink" title="Encrypt  Hanshake Message（Client）"></a>Encrypt  Hanshake Message（Client）</h5><p>客户端发送握手结束通知，同时会带上前面发送和接受内容的签名到服务器端，保证前面通信数据的正确性 </p>
+<p><strong>第四步是服务端向客户端发送消息：</strong></p>
+<h5 id="Change-Cipher-Spec（Server）"><a href="#Change-Cipher-Spec（Server）" class="headerlink" title="Change Cipher Spec（Server）"></a>Change Cipher Spec（Server）</h5><p>服务端生成<strong>master secret</strong>之后即可发送通知给客户端，以后要使用对称密钥<strong>master secret</strong>来加密数据了</p>
+<h5 id="Encrypt-Hanshake-Message（Server）"><a href="#Encrypt-Hanshake-Message（Server）" class="headerlink" title="Encrypt  Hanshake Message（Server）"></a>Encrypt  Hanshake Message（Server）</h5><p>服务端发送握手结束通知，同时会带上前面发送和接受内容的签名到客户端，保证前面通信数据的正确性 </p>
+<p><strong><em>整个握手过程可以参考<a href="https://tools.ietf.org/html/rfc5246" target="_blank" rel="noopener">RFC5246</a>文档</em></strong></p>
+<h4 id="HTTPS单向认证"><a href="#HTTPS单向认证" class="headerlink" title="HTTPS单向认证"></a>HTTPS单向认证</h4><p>上面讲的是双向认证的报文分析，那么如果是单向认证，报文如何，是否为上面分析的那样？我们实验一下，修改tomcat的配置：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Connector</span> <span class="attr">port</span>=<span class="string">"8443"</span> <span class="attr">protocol</span>=<span class="string">"org.apache.coyote.http11.Http11Protocol"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">maxThreads</span>=<span class="string">"150"</span> <span class="attr">SSLEnabled</span>=<span class="string">"true"</span> <span class="attr">scheme</span>=<span class="string">"https"</span> <span class="attr">secure</span>=<span class="string">"true"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">keystoreFile</span>=<span class="string">"conf/mykeystore"</span> <span class="attr">keystorePass</span>=<span class="string">"changeit"</span> <span class="attr">keyAlias</span>=<span class="string">"bingli"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">clientAuth</span>=<span class="string">"false"</span> <span class="attr">sslProtocol</span>=<span class="string">"TLS"</span> /&gt;</span></span><br></pre></td></tr></table></figure>
+<p>启动tomcat后还是相同的抓包方式，相同的访问方式，抓取到的报文如下：</p>
+<p><img src="https-alone.jpg" alt=""></p>
+<p>可以看到，https单项认证确实比双向认证少了Certificate Request、Certificate（Client）、Certificate Verify过程。</p>
+<h3 id="java实现ssl通信"><a href="#java实现ssl通信" class="headerlink" title="java实现ssl通信"></a>java实现ssl通信</h3><p>基本代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.io.BufferedReader;  </span><br><span class="line"><span class="keyword">import</span> java.io.FileInputStream;  </span><br><span class="line"><span class="keyword">import</span> java.io.IOException;  </span><br><span class="line"><span class="keyword">import</span> java.io.InputStreamReader;  </span><br><span class="line"><span class="keyword">import</span> java.io.PrintWriter;  </span><br><span class="line"><span class="keyword">import</span> java.net.ServerSocket;  </span><br><span class="line"><span class="keyword">import</span> java.net.Socket;  </span><br><span class="line"><span class="keyword">import</span> java.security.KeyStore;  </span><br><span class="line">  </span><br><span class="line"><span class="keyword">import</span> javax.net.ServerSocketFactory;  </span><br><span class="line"><span class="keyword">import</span> javax.net.ssl.KeyManagerFactory;  </span><br><span class="line"><span class="keyword">import</span> javax.net.ssl.SSLContext;  </span><br><span class="line"><span class="keyword">import</span> javax.net.ssl.SSLServerSocket;  </span><br><span class="line">  </span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SSLServer</span> <span class="keyword">extends</span> <span class="title">Thread</span> </span>&#123;  </span><br><span class="line">    <span class="keyword">private</span> Socket socket;  </span><br><span class="line">  </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">SSLServer</span><span class="params">(Socket socket)</span> </span>&#123;  </span><br><span class="line">        <span class="keyword">this</span>.socket = socket;  </span><br><span class="line">    &#125;  </span><br><span class="line">  </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;  </span><br><span class="line">        <span class="keyword">try</span> &#123;  </span><br><span class="line">            BufferedReader reader = <span class="keyword">new</span> BufferedReader(<span class="keyword">new</span> InputStreamReader(socket.getInputStream()));  </span><br><span class="line">            PrintWriter writer = <span class="keyword">new</span> PrintWriter(socket.getOutputStream());  </span><br><span class="line">  </span><br><span class="line">            String data = reader.readLine();  </span><br><span class="line">            writer.println(data);  </span><br><span class="line">            writer.close();  </span><br><span class="line">            socket.close();  </span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;  </span><br><span class="line">  </span><br><span class="line">        &#125;  </span><br><span class="line">    &#125;  </span><br><span class="line">  </span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> String SERVER_KEY_STORE = <span class="string">"E:\\project\\TOMCAT_7_0_83\\output\\build\\conf\\mykeystore"</span>;  </span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> String SERVER_KEY_STORE_PASSWORD = <span class="string">"changeit"</span>;  </span><br><span class="line">  </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;  </span><br><span class="line">        System.setProperty(<span class="string">"javax.net.ssl.trustStore"</span>, SERVER_KEY_STORE);  </span><br><span class="line">        SSLContext context = SSLContext.getInstance(<span class="string">"TLS"</span>);  </span><br><span class="line">          </span><br><span class="line">        KeyStore ks = KeyStore.getInstance(<span class="string">"jks"</span>);  </span><br><span class="line">        ks.load(<span class="keyword">new</span> FileInputStream(SERVER_KEY_STORE), <span class="keyword">null</span>);  </span><br><span class="line">        KeyManagerFactory kf = KeyManagerFactory.getInstance(<span class="string">"SunX509"</span>);  </span><br><span class="line">        kf.init(ks, SERVER_KEY_STORE_PASSWORD.toCharArray());  </span><br><span class="line">          </span><br><span class="line">        context.init(kf.getKeyManagers(), <span class="keyword">null</span>, <span class="keyword">null</span>);  </span><br><span class="line">  </span><br><span class="line">        ServerSocketFactory factory = context.getServerSocketFactory(); </span><br><span class="line">        <span class="comment">// 创建安全的ServerSocket套接字</span></span><br><span class="line">        ServerSocket _socket = factory.createServerSocket(<span class="number">8443</span>);  </span><br><span class="line">        <span class="comment">// 是否开启客户端认证</span></span><br><span class="line">        ((SSLServerSocket) _socket).setNeedClientAuth(<span class="keyword">false</span>);  </span><br><span class="line">  </span><br><span class="line">        <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;  </span><br><span class="line">            <span class="keyword">new</span> SSLServer(_socket.accept()).start();  </span><br><span class="line">        &#125;  </span><br><span class="line">    &#125;  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这样，基本的安全通信就写好了，其实tomcat的https原理也就是这样，只不过他做了一些封装，比如我们来看看org.apache.tomcat.util.net.jsse.JSSESocketFactory这个类，它实现了上面的ServerSocketFactory接口，构造函数如下和初始化方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">JSSESocketFactory</span> <span class="params">(AbstractEndpoint&lt;?&gt; endpoint)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.endpoint = endpoint;</span><br><span class="line"></span><br><span class="line">    String sslProtocol = endpoint.getSslProtocol();</span><br><span class="line">    <span class="keyword">if</span> (sslProtocol == <span class="keyword">null</span>) &#123;</span><br><span class="line">        sslProtocol = defaultProtocol;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    SSLContext context;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        context = SSLContext.getInstance(sslProtocol);</span><br><span class="line">        context.init(<span class="keyword">null</span>,  <span class="keyword">null</span>,  <span class="keyword">null</span>);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (NoSuchAlgorithmException e) &#123;</span><br><span class="line">        <span class="comment">// This is fatal for the connector so throw an exception to prevent</span></span><br><span class="line">        <span class="comment">// it from starting</span></span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(e);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (KeyManagementException e) &#123;</span><br><span class="line">        <span class="comment">// This is fatal for the connector so throw an exception to prevent</span></span><br><span class="line">        <span class="comment">// it from starting</span></span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(e);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Supported cipher suites aren't accessible directly from the</span></span><br><span class="line">    <span class="comment">// SSLContext so use the SSL server socket factory</span></span><br><span class="line">    SSLServerSocketFactory ssf = context.getServerSocketFactory();</span><br><span class="line">    String supportedCiphers[] = ssf.getSupportedCipherSuites();</span><br><span class="line">    <span class="keyword">boolean</span> found = <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">for</span> (String cipher : supportedCiphers) &#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="string">"TLS_EMPTY_RENEGOTIATION_INFO_SCSV"</span>.equals(cipher)) &#123;</span><br><span class="line">            found = <span class="keyword">true</span>;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    rfc5746Supported = found;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// There is no standard way to determine the default protocols and</span></span><br><span class="line">    <span class="comment">// cipher suites so create a server socket to see what the defaults are</span></span><br><span class="line">    SSLServerSocket socket;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        socket = (SSLServerSocket) ssf.createServerSocket();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">        <span class="comment">// This is very likely to be fatal but there is a slim chance that</span></span><br><span class="line">        <span class="comment">// the JSSE implementation just doesn't like creating unbound</span></span><br><span class="line">        <span class="comment">// sockets so allow the code to proceed.</span></span><br><span class="line">        defaultServerCipherSuites = <span class="keyword">new</span> String[<span class="number">0</span>];</span><br><span class="line">        defaultServerProtocols = <span class="keyword">new</span> String[<span class="number">0</span>];</span><br><span class="line">        log.warn(sm.getString(<span class="string">"jsse.noDefaultCiphers"</span>, endpoint.getName()));</span><br><span class="line">        log.warn(sm.getString(<span class="string">"jsse.noDefaultProtocols"</span>, endpoint.getName()));</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    ....</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * Reads the keystore and initializes the SSL socket factory.</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">init</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line"></span><br><span class="line">        String clientAuthStr = endpoint.getClientAuth();</span><br><span class="line">        <span class="keyword">if</span>(<span class="string">"true"</span>.equalsIgnoreCase(clientAuthStr) ||</span><br><span class="line">           <span class="string">"yes"</span>.equalsIgnoreCase(clientAuthStr)) &#123;</span><br><span class="line">            requireClientAuth = <span class="keyword">true</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span>(<span class="string">"want"</span>.equalsIgnoreCase(clientAuthStr)) &#123;</span><br><span class="line">            wantClientAuth = <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        SSLContext context = createSSLContext();</span><br><span class="line">        context.init(getKeyManagers(), getTrustManagers(), <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Configure SSL session cache</span></span><br><span class="line">        SSLSessionContext sessionContext =</span><br><span class="line">            context.getServerSessionContext();</span><br><span class="line">        <span class="keyword">if</span> (sessionContext != <span class="keyword">null</span>) &#123;</span><br><span class="line">            configureSessionContext(sessionContext);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// create proxy</span></span><br><span class="line">        sslProxy = context.getServerSocketFactory();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Determine which cipher suites to enable</span></span><br><span class="line">        enabledCiphers = getEnableableCiphers(context);</span><br><span class="line">        enabledProtocols = getEnableableProtocols(context);</span><br><span class="line"></span><br><span class="line">        allowUnsafeLegacyRenegotiation = <span class="string">"true"</span>.equals(</span><br><span class="line">            endpoint.getAllowUnsafeLegacyRenegotiation());</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Check the SSL config is OK</span></span><br><span class="line">        checkConfig();</span><br><span class="line"></span><br><span class="line">    &#125; <span class="keyword">catch</span>(Exception e) &#123;</span><br><span class="line">        <span class="keyword">if</span>( e <span class="keyword">instanceof</span> IOException )</span><br><span class="line">            <span class="keyword">throw</span> (IOException)e;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IOException(e.getMessage(), e);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>是不是和上面的代码很像，关键就是SSLContext这个上下文，获取到的ServerSocketFactory的实现是SSLServerSocketFactory。好了本文到此为止，如果有一些报文分析的案例，后面会补充到这里。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    Bing Li
+  </li>
+  <li class="post-copyright-created">
+    <strong>发表时间：</strong>
+ 2018-05-13 22:28:56
+  </li>
+  <li class="post-copyright-update">
+    <strong>最后更新：</strong>
+ 2018-05-13 22:28:56
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/" title="Tomcat安全—分析HTTPS">https://bingli-borland.github.io/blog/2018/05/13/Tomcat安全—分析HTTPS/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/blog/tags/java/" rel="tag"># java</a>
+          
+            <a href="/blog/tags/tomcat/" rel="tag"># tomcat</a>
+          
+            <a href="/blog/tags/https/" rel="tag"># https</a>
+          
+            <a href="/blog/tags/wireshark/" rel="tag"># wireshark</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/blog/2018/05/07/Tomcat安全—HTTPS/" rel="next" title="Tomcat安全—HTTPS">
+                <i class="fa fa-chevron-left"></i> Tomcat安全—HTTPS
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/blog/2018/06/11/AliTomcat分析—ClassLoader层次分析/" rel="prev" title="AliTomcat分析—ClassLoader层次分析">
+                AliTomcat分析—ClassLoader层次分析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      
+        <div id="gitment-container"></div>
+      
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Bing Li</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/blog/archives/">
+              
+                  <span class="site-state-item-count">24</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/blog/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/blog/tags/index.html">
+                  <span class="site-state-item-count">46</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/blog/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          <div class="links-of-author motion-element">
+            
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/bingli-borland" target="_blank" title="GitHub">
+                    
+                      <i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="mailto:1042996632@qq.com" target="_blank" title="E-Mail">
+                    
+                      <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            
+          </div>
+    
+    <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-globe"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                  <li class="links-of-blogroll-item">
+                    <a href="http://jm.taobao.org/" title="阿里中间件博客" target="_blank">阿里中间件博客</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="http://blog.51cto.com/guojuanjun" title="天下无贼" target="_blank">天下无贼</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="https://segmentfault.com/u/wuyangchun" title="Linux����" target="_blank">wuyangchun(Linux)</a>
+                  </li>
+              </ul>
+            </div>
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#报文抓取"><span class="nav-number">2.</span> <span class="nav-text">报文抓取</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#HTTP"><span class="nav-number">2.1.</span> <span class="nav-text">HTTP</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#HTTPS"><span class="nav-number">2.2.</span> <span class="nav-text">HTTPS</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#Client-Hello"><span class="nav-number">2.2.1.</span> <span class="nav-text">Client Hello</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Server-Hello"><span class="nav-number">2.2.2.</span> <span class="nav-text">Server Hello</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Certificate（Server）"><span class="nav-number">2.2.3.</span> <span class="nav-text">Certificate（Server）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Server-Key-Exchange"><span class="nav-number">2.2.4.</span> <span class="nav-text">Server Key Exchange</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Certificate-Request"><span class="nav-number">2.2.5.</span> <span class="nav-text">Certificate Request</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Server-Hello-Done"><span class="nav-number">2.2.6.</span> <span class="nav-text">Server Hello Done</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Certificate（Client）"><span class="nav-number">2.2.7.</span> <span class="nav-text">Certificate（Client）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Client-Key-Exchange"><span class="nav-number">2.2.8.</span> <span class="nav-text">Client Key Exchange</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Certificate-Verify"><span class="nav-number">2.2.9.</span> <span class="nav-text">Certificate Verify</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Change-Cipher-Spec（Client）"><span class="nav-number">2.2.10.</span> <span class="nav-text">Change Cipher Spec（Client）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Encrypt-Hanshake-Message（Client）"><span class="nav-number">2.2.11.</span> <span class="nav-text">Encrypt  Hanshake Message（Client）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Change-Cipher-Spec（Server）"><span class="nav-number">2.2.12.</span> <span class="nav-text">Change Cipher Spec（Server）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Encrypt-Hanshake-Message（Server）"><span class="nav-number">2.2.13.</span> <span class="nav-text">Encrypt  Hanshake Message（Server）</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#HTTPS单向认证"><span class="nav-number">2.3.</span> <span class="nav-text">HTTPS单向认证</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#java实现ssl通信"><span class="nav-number">3.</span> <span class="nav-text">java实现ssl通信</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2017 &mdash; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Bing Li</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a></div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/utils.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/motion.js?v=5.1.3"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/affix.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/schemes/pisces.js?v=5.1.3"></script>
+
+
+
+  
+  <script type="text/javascript" src="/blog/js/src/scrollspy.js?v=5.1.3"></script>
+<script type="text/javascript" src="/blog/js/src/post-details.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/bootstrap.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+<!-- LOCAL: You can save these files to your site and update links -->
+    
+        
+        <link rel="stylesheet" href="https://aimingoo.github.io/gitmint/style/default.css">
+        <script src="https://aimingoo.github.io/gitmint/dist/gitmint.browser.js"></script>
+    
+<!-- END LOCAL -->
+
+    
+
+    
+      <script type="text/javascript">
+      function renderGitment(){
+        var gitment = new Gitmint({
+            id: window.location.pathname, 
+            owner: 'bingli-borland',
+            repo: 'blog',
+            
+            lang: "" || navigator.language || navigator.systemLanguage || navigator.userLanguage,
+            
+            oauth: {
+            
+            
+                client_secret: '15d5986f446770cf9d00de45fe9cad58e0e890f3',
+            
+                client_id: '2827532caba6f447f0b0'
+            }});
+        gitment.render('gitment-container');
+      }
+
+      
+      renderGitment();
+      
+      </script>
+    
+
+
+
+
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/blog/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("UDWbbilpB75dbOg2gXfE9jqT-gzGzoHsz", "tdIIS5nlhxM9psPaMOOqtKLe");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

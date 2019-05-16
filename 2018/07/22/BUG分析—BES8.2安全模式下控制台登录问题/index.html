@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/blog/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/blog/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/blog/css/main.css?v=5.1.3" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/blog/images/apple-touch-icon-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/blog/images/favicon-32x32-next.png?v=5.1.3">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/blog/images/favicon-16x16-next.png?v=5.1.3">
+
+
+  <link rel="mask-icon" href="/blog/images/logo.svg?v=5.1.3" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="java,console,login,bes8.2,https,">
+
+
+
+
+
+  <link rel="alternate" href="/blog/atom.xml" title="技术与生活" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="前言最近bes8.2遇到了问题，场景如下：  1、domain的1900端口开启https 2、进入到控制台登录页面之后使用错误的用户名和密码登录，提示用户名和密码错误 3、再输入正确的用户名和密码继续登录仍然失败，且会返回来404页面，url为接受登录请求的/login 4、同样的步骤，在http模式下，步骤3是可以登录成功的  控制台登录方案控制台登录的基本流程如下：">
+<meta name="keywords" content="java,console,login,bes8.2,https">
+<meta property="og:type" content="article">
+<meta property="og:title" content="BUG分析—BES8.2安全模式下控制台登录问题">
+<meta property="og:url" content="https://bingli-borland.github.io/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/index.html">
+<meta property="og:site_name" content="技术与生活">
+<meta property="og:description" content="前言最近bes8.2遇到了问题，场景如下：  1、domain的1900端口开启https 2、进入到控制台登录页面之后使用错误的用户名和密码登录，提示用户名和密码错误 3、再输入正确的用户名和密码继续登录仍然失败，且会返回来404页面，url为接受登录请求的/login 4、同样的步骤，在http模式下，步骤3是可以登录成功的  控制台登录方案控制台登录的基本流程如下：">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/loginflow.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/data1.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/data2.jpg">
+<meta property="og:image" content="https://bingli-borland.github.io/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/filter.jpg">
+<meta property="og:updated_time" content="2018-07-22T07:11:03.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="BUG分析—BES8.2安全模式下控制台登录问题">
+<meta name="twitter:description" content="前言最近bes8.2遇到了问题，场景如下：  1、domain的1900端口开启https 2、进入到控制台登录页面之后使用错误的用户名和密码登录，提示用户名和密码错误 3、再输入正确的用户名和密码继续登录仍然失败，且会返回来404页面，url为接受登录请求的/login 4、同样的步骤，在http模式下，步骤3是可以登录成功的  控制台登录方案控制台登录的基本流程如下：">
+<meta name="twitter:image" content="https://bingli-borland.github.io/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/loginflow.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/blog/',
+    scheme: 'Gemini',
+    version: '5.1.3',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://bingli-borland.github.io/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/">
+
+
+
+
+
+  <title>BUG分析—BES8.2安全模式下控制台登录问题 | 技术与生活</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/blog/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">技术与生活</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/blog/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/blog/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/blog/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/blog/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/blog/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://bingli-borland.github.io/blog/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Bing Li">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/blog/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="技术与生活">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">BUG分析—BES8.2安全模式下控制台登录问题</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-07-22T15:11:03+08:00">
+                2018-07-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/blog/categories/BUG分析/" itemprop="url" rel="index">
+                    <span itemprop="name">BUG分析</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count gitment-comments-count" data-xid="/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/" class="leancloud_visitors" data-flag-title="BUG分析—BES8.2安全模式下控制台登录问题">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>最近bes8.2遇到了问题，场景如下：</p>
+<blockquote>
+<p>1、domain的1900端口开启https</p>
+<p>2、进入到控制台登录页面之后使用错误的用户名和密码登录，提示用户名和密码错误</p>
+<p>3、再输入正确的用户名和密码继续登录仍然失败，且会返回来404页面，url为接受登录请求的/login</p>
+<p>4、同样的步骤，在http模式下，步骤3是可以登录成功的</p>
+</blockquote>
+<h3 id="控制台登录方案"><a href="#控制台登录方案" class="headerlink" title="控制台登录方案"></a>控制台登录方案</h3><p>控制台登录的基本流程如下：</p>
+<p><img src="/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/loginflow.jpg" alt=""></p>
+<a id="more"></a>
+<h3 id="问题定位分析"><a href="#问题定位分析" class="headerlink" title="问题定位分析"></a>问题定位分析</h3><h4 id="404从何而来？"><a href="#404从何而来？" class="headerlink" title="404从何而来？"></a>404从何而来？</h4><p>这个是最直接的问题，步骤3为什么一个明显存在的请求路径会出现404？通过greys我们来定位代码，脚本如下</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">ga?&gt;stack *.*Response setStatus 'params[0] == 404'</span><br><span class="line">org.apache.coyote.Response.setStatus(Response.java:-1)</span><br><span class="line">at org.apache.coyote.tomcat5.CoyoteResponse.sendError(CoyoteResponse.java:1275)</span><br><span class="line">at org.apache.coyote.tomcat5.CoyoteResponse.sendError(CoyoteResponse.java:1243)</span><br><span class="line">at org.apache.coyote.tomcat5.CoyoteResponseFacade.sendError(CoyoteResponseFacade.java:412)</span><br><span class="line">at org.apache.catalina.servlets.DefaultServlet.serveResource(DefaultServlet.java:716)</span><br><span class="line">at org.apache.catalina.servlets.DefaultServlet.doGet(DefaultServlet.java:360)</span><br><span class="line">at org.apache.catalina.servlets.DefaultServlet.doPost(DefaultServlet.java:396)</span><br><span class="line">at javax.servlet.http.HttpServlet.service(HttpServlet.java:712)</span><br><span class="line">at javax.servlet.http.HttpServlet.service(HttpServlet.java:805)</span><br></pre></td></tr></table></figure>
+<p>这个还是不能看出什么，但是之所以会404，是由于DeafultServlet执行时，处理静态资源无法找到，那继续追踪究竟请求什么资源？</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">ga?&gt;watch -f *.DefaultServlet serveResource params[0] -x 1</span><br><span class="line">Press Ctrl+D to abort.</span><br><span class="line">Affect(class-cnt:1 , method-cnt:1) cost in 101 ms.</span><br><span class="line">@ApplicationHttpRequest[</span><br><span class="line">    sm=@StringManager[org.apache.catalina.util.StringManager@3e0a52d3],</span><br><span class="line">    requestedSessionVersion=null,</span><br><span class="line">    isSessionVersioningSupported=@Boolean[false],</span><br><span class="line"> context=@WebModule[StandardEngine[com.bes.appserv].StandardHost[__dmsVS].StandardContext[/console]],</span><br><span class="line">    contextPath=@String[/console],</span><br><span class="line">    crossContext=@Boolean[false],</span><br><span class="line">    dispatcherType=@Integer[1],</span><br><span class="line">    info=@String[org.apache.catalina.core.ApplicationHttpRequest/1.0],</span><br><span class="line">    parameters=null,</span><br><span class="line">    parsedParams=@Boolean[false],</span><br><span class="line">    pathInfo=null,</span><br><span class="line">    queryParamString=null,</span><br><span class="line">    queryString=null,</span><br><span class="line">    requestDispatcherPath=@String[/WEB-INF/frame/errors/403.ftl],</span><br><span class="line">    requestURI=@String[/console/WEB-INF/frame/errors/403.ftl],</span><br><span class="line">    servletPath=@String[/WEB-INF/frame/errors/403.ftl],</span><br><span class="line">    session=null,</span><br><span class="line">    specialAttributes=@HashMap[isTop=false;size=5],</span><br><span class="line">    isIncludeDispatch=@Boolean[false],</span><br><span class="line">]</span><br><span class="line">@ApplicationHttpRequest[</span><br><span class="line">    sm=@StringManager[org.apache.catalina.util.StringManager@3e0a52d3],</span><br><span class="line">    requestedSessionVersion=null,</span><br><span class="line">    isSessionVersioningSupported=@Boolean[false],</span><br><span class="line">    context=@WebModule[StandardEngine[com.bes.appserv].StandardHost[__dmsVS].StandardContext[/console]],</span><br><span class="line">    contextPath=@String[/console],</span><br><span class="line">    crossContext=@Boolean[false],</span><br><span class="line">    dispatcherType=@Integer[1],</span><br><span class="line">    info=@String[org.apache.catalina.core.ApplicationHttpRequest/1.0],</span><br><span class="line">    parameters=null,</span><br><span class="line">    parsedParams=@Boolean[false],</span><br><span class="line">    pathInfo=null,</span><br><span class="line">    queryParamString=null,</span><br><span class="line">    queryString=null,</span><br><span class="line">    requestDispatcherPath=@String[/WEB-INF/frame/errors/404.ftl],</span><br><span class="line">    requestURI=@String[/console/WEB-INF/frame/errors/404.ftl],</span><br><span class="line">    servletPath=@String[/WEB-INF/frame/errors/404.ftl],</span><br><span class="line">    session=null,</span><br><span class="line">    specialAttributes=@HashMap[isTop=false;size=5],</span><br><span class="line">    isIncludeDispatch=@Boolean[false],</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<p>可以看到，这里先找了403对应的页面，然后找了404对应的页面，查看web.xml确实有这段配置，但是实际上这个页面路径配置错了，应该在/WEB-INF/system/errors/下，因此逻辑应该时这样：有一段逻辑设置了403，容器处理时找对应的静态资源，发现403.ftl也找不到，因此又设置404，404.ftl也找不到，最后返回到console</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- error pages --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">error-page</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">exception-type</span>&gt;</span>java.lang.Throwable<span class="tag">&lt;/<span class="name">exception-type</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">location</span>&gt;</span>/WEB-INF/frame/errors/500.ftl<span class="tag">&lt;/<span class="name">location</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">error-page</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">error-page</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">error-code</span>&gt;</span>500<span class="tag">&lt;/<span class="name">error-code</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">location</span>&gt;</span>/WEB-INF/frame/errors/500.ftl<span class="tag">&lt;/<span class="name">location</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">error-page</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">error-page</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">error-code</span>&gt;</span>404<span class="tag">&lt;/<span class="name">error-code</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">location</span>&gt;</span>/WEB-INF/frame/errors/404.ftl<span class="tag">&lt;/<span class="name">location</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">error-page</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">error-page</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">error-code</span>&gt;</span>403<span class="tag">&lt;/<span class="name">error-code</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">location</span>&gt;</span>/WEB-INF/frame/errors/403.ftl<span class="tag">&lt;/<span class="name">location</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">error-page</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>ApplicationDispatcher代码位置：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">forward</span><span class="params">(ServletRequest request, ServletResponse response)</span></span></span><br><span class="line"><span class="function">  <span class="keyword">throws</span> ServletException, IOException</span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (Globals.IS_SECURITY_ENABLED) &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      PrivilegedForward dp = <span class="keyword">new</span> PrivilegedForward(request, response);</span><br><span class="line">      AccessController.doPrivileged(dp);</span><br><span class="line"></span><br><span class="line">      ApplicationDispatcherForward.commit((HttpServletRequest)request, (HttpServletResponse)response, <span class="keyword">this</span>.context, <span class="keyword">this</span>.wrapper);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">catch</span> (PrivilegedActionException pe)</span><br><span class="line">    &#123;</span><br><span class="line">      Exception e = pe.getException();</span><br><span class="line">      <span class="keyword">if</span> (e <span class="keyword">instanceof</span> ServletException)</span><br><span class="line">        <span class="keyword">throw</span> ((ServletException)e);</span><br><span class="line">      <span class="keyword">throw</span> ((IOException)e);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">//根据403状态路由到403页面，不存在则设置404状态</span></span><br><span class="line">    doForward(request, response);</span><br><span class="line"><span class="comment">//重新根据404状态路由到404页面，不存在则设置404状态</span></span><br><span class="line">    ApplicationDispatcherForward.commit((HttpServletRequest)request, (HttpServletResponse)response, <span class="keyword">this</span>.context, <span class="keyword">this</span>.wrapper);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>那么现在的问题就是哪儿设置 了403？</p>
+<h4 id="CSRF过滤器为何设置403状态？"><a href="#CSRF过滤器为何设置403状态？" class="headerlink" title="CSRF过滤器为何设置403状态？"></a>CSRF过滤器为何设置403状态？</h4><p>继续使用greys定位，发现问题在CSRF的过滤器上</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">ga?&gt;stack *.*Response setStatus 'params[0] == 403'</span><br><span class="line">Press Ctrl+D to abort.</span><br><span class="line">Affect(class-cnt:5 , method-cnt:9) cost in 330 ms.</span><br><span class="line">thread_name="httpSSLWorkerThread-1900-6" thread_id=0x4c;is_daemon=true;priority=10;</span><br><span class="line">@org.apache.coyote.Response.setStatus(Response.java:-1)</span><br><span class="line">at org.apache.coyote.tomcat5.CoyoteResponse.sendError(CoyoteResponse.java:1275)</span><br><span class="line">at org.apache.coyote.tomcat5.CoyoteResponse.sendError(CoyoteResponse.java:1243)</span><br><span class="line">at org.apache.coyote.tomcat5.CoyoteResponseFacade.sendError(CoyoteResponseFacade.java:412)</span><br><span class="line">at org.apache.coyote.http11.filters.CsrfPreventionFilter.doFilter(CsrfPreventionFilter.java:195)</span><br><span class="line">at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:204)</span><br><span class="line">at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:172)</span><br><span class="line">at org.apache.coyote.http11.filters.XssPreventionFilter.doFilter(XssPreventionFilter.java:54)</span><br><span class="line">at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:204)</span><br><span class="line">at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:172)</span><br></pre></td></tr></table></figure>
+<p>查阅CSRF的资料对照代码，我们知道如果请求路径没有在entryPoints中，同时session存在，但不包含对应的Nonce，就会直接返回403(SC_FORBIDDEN)。 那么可以分析，上面步骤3输入正确的密码发送的登录请求中并没包含Nonce信息或者Nonce信息不对，这时我们需要验证我们的分析是否正确。</p>
+<p>http模式下步骤3的数据包：</p>
+<p><img src="/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/data1.jpg" alt=""></p>
+<p>http模式下步骤3的数据包：</p>
+<p><img src="/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/data2.jpg" alt=""></p>
+<p>可以明显看到确实https模式下没有Nonce信息，证实了我们的分析，但是为什么没有呢？我们在登录页面找到了这么一段代码，发现了踪迹，原来是页面生成时会将Nonce信息返回到页面中，最后随着请求一起提交，当然为了安全数据经过encode了，这里比较明显的就是bes.\$besCsrfNonce$这个值。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> name=<span class="built_in">document</span>.getElementById(<span class="string">'j_username'</span>);</span><br><span class="line"><span class="keyword">var</span> password=<span class="built_in">document</span>.getElementById(<span class="string">'j_password'</span>);</span><br><span class="line"><span class="keyword">var</span> certcode = <span class="built_in">document</span>.getElementById(<span class="string">'j_certcode'</span>);</span><br><span class="line"><span class="keyword">var</span> error=<span class="built_in">document</span>.getElementById(<span class="string">'login_error'</span>);</span><br><span class="line"><span class="keyword">if</span>(name.value.trim() == <span class="string">''</span> )&#123;</span><br><span class="line">  <span class="keyword">var</span> h=<span class="string">'&lt;div class=\\'</span>ActionErrorsImg\\<span class="string">'&gt;&lt;div class=\\'</span>ActionErrors\\<span class="string">'&gt;'</span> ;</span><br><span class="line">  h+=<span class="string">'&lt;nodr&gt;$&#123;bundle('</span>username.not.allow.null<span class="string">')&#125;&lt;/nodr&gt;&lt;/div&gt;&lt;/div&gt;'</span>;</span><br><span class="line">  error.innerHTML=h;</span><br><span class="line">  name.focus();</span><br><span class="line">  <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;<span class="keyword">else</span> <span class="keyword">if</span>(password.value == <span class="string">''</span>)&#123;</span><br><span class="line">  <span class="keyword">var</span> h=<span class="string">'&lt;div class=\\'</span>ActionErrorsImg\\<span class="string">'&gt;&lt;div class=\\'</span>ActionErrors\\<span class="string">'&gt;'</span> ;</span><br><span class="line">  h+=<span class="string">'&lt;nodr&gt;$&#123;bundle('</span>password.not.allow.null<span class="string">')&#125;&lt;/nodr&gt;&lt;/div&gt;&lt;/div&gt;'</span>;</span><br><span class="line">  error.innerHTML=h;</span><br><span class="line">  password.focus();</span><br><span class="line">  <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span>(certcode &amp;&amp; certcode.value.trim() ==<span class="string">''</span>)&#123;</span><br><span class="line"> <span class="keyword">var</span> h=<span class="string">'&lt;div class=\\'</span>ActionErrorsImg\\<span class="string">'&gt;&lt;div class=\\'</span>ActionErrors\\<span class="string">'&gt;'</span> ;</span><br><span class="line"> h+=<span class="string">'&lt;nodr&gt;$&#123;bundle('</span>certcode.not.allow.null<span class="string">')&#125;&lt;/nodr&gt;&lt;/div&gt;&lt;/div&gt;'</span>;</span><br><span class="line"> error.innerHTML=h;</span><br><span class="line"> certcode.focus();</span><br><span class="line"> <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br><span class="line">password.value = encrypt(password.value);</span><br><span class="line"><span class="keyword">var</span> id = bes.encode(<span class="string">'/login'</span>);</span><br><span class="line"><span class="keyword">var</span> inputNode=$(id);</span><br><span class="line"><span class="keyword">if</span>(inputNode == <span class="literal">null</span>) &#123;</span><br><span class="line">    inputNode = dojo.create(<span class="string">'input'</span>,&#123;</span><br><span class="line">                    id:id,</span><br><span class="line">                    type:<span class="string">'hidden'</span>,</span><br><span class="line">                    name:id</span><br><span class="line">                  &#125;,</span><br><span class="line">                  $(<span class="string">'loginFrom'</span>)</span><br><span class="line">                );</span><br><span class="line">&#125;</span><br><span class="line">inputNode.value = bes.encode(bes.$besCsrfNonce$);</span><br><span class="line"><span class="keyword">return</span> <span class="literal">true</span>;</span><br></pre></td></tr></table></figure>
+<p>后端代码对应如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">getBesCsrfNonce</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    HttpSession session = getServletRequest().getSession(<span class="keyword">false</span>);</span><br><span class="line">    <span class="keyword">if</span> ((session == <span class="keyword">null</span>) || (session.getAttribute(<span class="string">"org.apache.catalina.filters.CSRF_NONCE"</span>) == <span class="keyword">null</span>)) &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    String requestUrl = <span class="string">"/"</span>;</span><br><span class="line">    String encodeUrl = getServletResponse().encodeURL(requestUrl);</span><br><span class="line">    <span class="keyword">int</span> beginIndex = encodeUrl.indexOf(<span class="string">"="</span>);</span><br><span class="line">    String besCsrfNonce = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span> (beginIndex &gt; <span class="number">0</span>) &#123;</span><br><span class="line">      besCsrfNonce = encodeUrl.substring(beginIndex + <span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> besCsrfNonce;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>那么getBesCsrfNonce拿不到值只有两种可能：</p>
+<blockquote>
+<p>1、session中没有放入org.apache.catalina.filters.CSRF_NONCE信息</p>
+<p>2、getServletResponse().encodeURL(requestUrl)没有对应的Nonce信息</p>
+</blockquote>
+<p>但是仔细分析都是CsrfPreventionFilter过滤器没有执行导致，因为org.apache.catalina.filters.CSRF_NONCE只在这个过滤器中放入，同时也只在这个过滤器中封装response对象为CsrfResponseWrapper。要确定这个filter是否执行了，又要使用比较法了，我们知道第一次登录时LoginAction一定执行了，所以对比http和https两种模式的调用栈，会发现https模式的ApplicationFilterChain上确实少了CsrfPreventionFilter，而且只有StrutsFilter执行了。在线程栈中，https模式下跳转到安全域的错误页面使用的forward方式，非安全使用的redirect方式。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">forwardToErrorPage</span><span class="params">(HttpRequest request, HttpResponse response, LoginConfig config)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  ServletContext sc = <span class="keyword">this</span>.context.getServletContext();</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (request.getRequest().isSecure()) &#123;</span><br><span class="line">      RequestDispatcher disp = sc.getRequestDispatcher(config.getErrorPage());</span><br><span class="line"></span><br><span class="line">      disp.forward(request.getRequest(), response.getResponse());</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      ((HttpServletResponse)response.getResponse()).sendRedirect(sc.getContextPath() + config.getErrorPage());</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">    log.warn(<span class="string">"Unexpected error forwarding or redirecting to error page"</span>, t);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>下面的问题就是确定CsrfPreventionFilter为什么没有执行？</p>
+<h4 id="过滤器配置"><a href="#过滤器配置" class="headerlink" title="过滤器配置"></a>过滤器配置</h4><p>查看web.xml对filter的配置</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- Xss Prevention filter --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">filter</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>XssFilter<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">filter-class</span>&gt;</span>org.apache.coyote.http11.filters.XssPreventionFilter<span class="tag">&lt;/<span class="name">filter-class</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">filter</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">filter-mapping</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>XssFilter<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">url-pattern</span>&gt;</span>/*<span class="tag">&lt;/<span class="name">url-pattern</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">filter-mapping</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- Csrf Prevention filter --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">filter</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>CsrfFilter<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">filter-class</span>&gt;</span>org.apache.coyote.http11.filters.CsrfPreventionFilter<span class="tag">&lt;/<span class="name">filter-class</span>&gt;</span></span><br><span class="line">       <span class="tag">&lt;<span class="name">init-param</span>&gt;</span></span><br><span class="line">           <span class="tag">&lt;<span class="name">param-name</span>&gt;</span>entryPoints<span class="tag">&lt;/<span class="name">param-name</span>&gt;</span></span><br><span class="line">           <span class="tag">&lt;<span class="name">param-value</span>&gt;</span>/j_security_check,/home,/login,/index.jsp,/favicon.ico<span class="tag">&lt;/<span class="name">param-value</span>&gt;</span></span><br><span class="line">       <span class="tag">&lt;/<span class="name">init-param</span>&gt;</span></span><br><span class="line">       <span class="tag">&lt;<span class="name">init-param</span>&gt;</span></span><br><span class="line">           <span class="tag">&lt;<span class="name">param-name</span>&gt;</span>entryPrefixPoints<span class="tag">&lt;/<span class="name">param-name</span>&gt;</span></span><br><span class="line">           <span class="tag">&lt;<span class="name">param-value</span>&gt;</span>/image/,/style/,/script/,/docs/,/docs_en/<span class="tag">&lt;/<span class="name">param-value</span>&gt;</span></span><br><span class="line">       <span class="tag">&lt;/<span class="name">init-param</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">filter</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">filter-mapping</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>CsrfFilter<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">url-pattern</span>&gt;</span>/*<span class="tag">&lt;/<span class="name">url-pattern</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">filter-mapping</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- Struts2 filter --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">filter</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>struts2Filter<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">filter-class</span>&gt;</span>com.bes.console.frame.controller.StrutsFilter<span class="tag">&lt;/<span class="name">filter-class</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">filter</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">filter-mapping</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>struts2Filter<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">url-pattern</span>&gt;</span>/*<span class="tag">&lt;/<span class="name">url-pattern</span>&gt;</span></span><br><span class="line">               <span class="tag">&lt;<span class="name">dispatcher</span>&gt;</span>FORWARD<span class="tag">&lt;/<span class="name">dispatcher</span>&gt;</span></span><br><span class="line">               <span class="tag">&lt;<span class="name">dispatcher</span>&gt;</span>REQUEST<span class="tag">&lt;/<span class="name">dispatcher</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">filter-mapping</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>发现struts2Filter配置dispatcher为FORWARD、REQUEST，但是CsrfPreventionFilter并没有配置，因此可能时这个原因造成的。动手验证给CsrfPreventionFilter加上dispatcher为FORWARD、REQUEST后，步骤3可以登录成功。对于这个配置我们可以参考servlet规范。</p>
+<h3 id="Dispatcher规范定义"><a href="#Dispatcher规范定义" class="headerlink" title="Dispatcher规范定义"></a>Dispatcher规范定义</h3><p><img src="/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/filter.jpg" alt=""></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    Bing Li
+  </li>
+  <li class="post-copyright-created">
+    <strong>发表时间：</strong>
+ 2018-07-22 15:11:03
+  </li>
+  <li class="post-copyright-update">
+    <strong>最后更新：</strong>
+ 2018-07-22 15:11:03
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://bingli-borland.github.io/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/" title="BUG分析—BES8.2安全模式下控制台登录问题">https://bingli-borland.github.io/blog/2018/07/22/BUG分析—BES8.2安全模式下控制台登录问题/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/blog/tags/java/" rel="tag"># java</a>
+          
+            <a href="/blog/tags/console/" rel="tag"># console</a>
+          
+            <a href="/blog/tags/login/" rel="tag"># login</a>
+          
+            <a href="/blog/tags/bes8-2/" rel="tag"># bes8.2</a>
+          
+            <a href="/blog/tags/https/" rel="tag"># https</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/blog/2018/07/04/Tomcat源码分析—应用部署分析(一)/" rel="next" title="Tomcat源码分析—应用部署分析(一)">
+                <i class="fa fa-chevron-left"></i> Tomcat源码分析—应用部署分析(一)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/blog/2018/07/24/Tomcat源码分析—编码/" rel="prev" title="Tomcat源码分析—编码">
+                Tomcat源码分析—编码 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      
+        <div id="gitment-container"></div>
+      
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">Bing Li</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/blog/archives/">
+              
+                  <span class="site-state-item-count">24</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/blog/categories/index.html">
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/blog/tags/index.html">
+                  <span class="site-state-item-count">46</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/blog/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          <div class="links-of-author motion-element">
+            
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/bingli-borland" target="_blank" title="GitHub">
+                    
+                      <i class="fa fa-fw fa-github"></i>GitHub</a>
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="mailto:1042996632@qq.com" target="_blank" title="E-Mail">
+                    
+                      <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                </span>
+              
+            
+          </div>
+    
+    <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-globe"></i>
+                Links
+              </div>
+              <ul class="links-of-blogroll-list">
+                  <li class="links-of-blogroll-item">
+                    <a href="http://jm.taobao.org/" title="阿里中间件博客" target="_blank">阿里中间件博客</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="http://blog.51cto.com/guojuanjun" title="天下无贼" target="_blank">天下无贼</a>
+                  </li>
+                  <li class="links-of-blogroll-item">
+        <a href="https://segmentfault.com/u/wuyangchun" title="Linux����" target="_blank">wuyangchun(Linux)</a>
+                  </li>
+              </ul>
+            </div>
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#控制台登录方案"><span class="nav-number">2.</span> <span class="nav-text">控制台登录方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#问题定位分析"><span class="nav-number">3.</span> <span class="nav-text">问题定位分析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#404从何而来？"><span class="nav-number">3.1.</span> <span class="nav-text">404从何而来？</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#CSRF过滤器为何设置403状态？"><span class="nav-number">3.2.</span> <span class="nav-text">CSRF过滤器为何设置403状态？</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#过滤器配置"><span class="nav-number">3.3.</span> <span class="nav-text">过滤器配置</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Dispatcher规范定义"><span class="nav-number">4.</span> <span class="nav-text">Dispatcher规范定义</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2017 &mdash; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Bing Li</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a></div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/blog/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/utils.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/motion.js?v=5.1.3"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/affix.js?v=5.1.3"></script>
+
+  <script type="text/javascript" src="/blog/js/src/schemes/pisces.js?v=5.1.3"></script>
+
+
+
+  
+  <script type="text/javascript" src="/blog/js/src/scrollspy.js?v=5.1.3"></script>
+<script type="text/javascript" src="/blog/js/src/post-details.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/blog/js/src/bootstrap.js?v=5.1.3"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+<!-- LOCAL: You can save these files to your site and update links -->
+    
+        
+        <link rel="stylesheet" href="https://aimingoo.github.io/gitmint/style/default.css">
+        <script src="https://aimingoo.github.io/gitmint/dist/gitmint.browser.js"></script>
+    
+<!-- END LOCAL -->
+
+    
+
+    
+      <script type="text/javascript">
+      function renderGitment(){
+        var gitment = new Gitmint({
+            id: window.location.pathname, 
+            owner: 'bingli-borland',
+            repo: 'blog',
+            
+            lang: "" || navigator.language || navigator.systemLanguage || navigator.userLanguage,
+            
+            oauth: {
+            
+            
+                client_secret: '15d5986f446770cf9d00de45fe9cad58e0e890f3',
+            
+                client_id: '2827532caba6f447f0b0'
+            }});
+        gitment.render('gitment-container');
+      }
+
+      
+      renderGitment();
+      
+      </script>
+    
+
+
+
+
+<script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/blog/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("UDWbbilpB75dbOg2gXfE9jqT-gzGzoHsz", "tdIIS5nlhxM9psPaMOOqtKLe");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
