@@ -1320,3 +1320,35 @@ public class BitGraph {
 
 10、10进制转二进制算法
 
+三面
+
+项目和RPC原理
+
+四面
+
+1、java读取多个100g的超大文件，给错误日志排序
+
+2、代码实现stringToInt，例如：“123”  转成 123
+
+需要加强：
+
+1、rpc
+
+2、mysql、redis、shared-jdbc
+
+3、Java基础、tcpip
+
+
+
+一面：
+
+1、cookie跨域、sso
+
+2、nio和aio本质区别
+
+3、loadclass和findclass区别
+
+如果不想打破双亲委派模型，那么只需要重写findClass方法即可
+
+如果想打破双亲委派模型，那么就重写整个loadClass方法
+
