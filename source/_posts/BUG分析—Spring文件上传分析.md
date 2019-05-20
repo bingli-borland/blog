@@ -360,6 +360,14 @@ private boolean isMultipart() {
 
 这个问题的关键点是StandardServletMultipartResolver和CommonsMultipartResolver混合同时使用，实际DispatchServlet只能接受一个multipartResolver对象，因此只能使用其中一个。
 
+### 续集
+
+本以为上面的分析已经够了，但是现场反应在tomcat8.5中，没有配置multipart-config，spring.xml配置了StandardServletMultipartResolver，但是还是上传成功了，无语了，只有继续detail了，但是能够确定一点是业务执行之前multipartResolver是没有真正的读文件流的，经过长时间分析，最后回到parseParts的explicit参数，发现还有解析parameter参数的时候调用，而且explicit=false，如果explicit=false，parts会被设置为emptyList，就不会解析文件流，当前请求再调用parseParts也会直接返回，干净对比下生产应用和demo应用不同之处，发现SessionFilter不一样，恰好生产上的SessionFilter中就调用了getParameterMap。
+
+![](BUG分析—Spring文件上传分析/getParts.jpg)
+
+最后看到weblogic的处理，不配置multipart-config，不用规范解析，也不抛异常，服了。
+
 ### 参考
 http://www.cnblogs.com/tengyunhao/p/7670293.html
 https://www.cnblogs.com/ceshi2016/p/8421624.html
